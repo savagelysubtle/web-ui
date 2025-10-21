@@ -7,9 +7,11 @@
 [![Documentation](https://img.shields.io/badge/Documentation-📕-blue)](https://docs.browser-use.com)
 [![WarmShao](https://img.shields.io/twitter/follow/warmshao?style=social)](https://x.com/warmshao)
 
+> **Note:** This is a fork of [browser-use/web-ui](https://github.com/browser-use/web-ui) with enhancements including UV backend, Python 3.14t support, Ruff/ty integration, and modern dependency management.
+
 This project builds upon the foundation of the [browser-use](https://github.com/browser-use/browser-use), which is designed to make websites accessible for AI agents.
 
-We would like to officially thank [WarmShao](https://github.com/warmshao) for his contribution to this project.
+We would like to officially thank [WarmShao](https://github.com/warmshao) for his contribution to the original project.
 
 **WebUI:** is built on Gradio and supports most of `browser-use` functionalities. This UI is designed to be user-friendly and enables easy interaction with the browser agent.
 
@@ -30,9 +32,11 @@ Read the [quickstart guide](https://docs.browser-use.com/quickstart#prepare-the-
 #### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/browser-use/web-ui.git
+git clone https://github.com/savagelysubtle/web-ui.git
 cd web-ui
 ```
+
+> **Tip:** To sync with upstream: `git remote add upstream https://github.com/browser-use/web-ui.git`
 
 #### Step 2: Set Up Python Environment
 
@@ -155,9 +159,11 @@ cp .env.example .env
 #### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/browser-use/web-ui.git
+git clone https://github.com/savagelysubtle/web-ui.git
 cd web-ui
 ```
+
+> **Tip:** To sync with upstream: `git remote add upstream https://github.com/browser-use/web-ui.git`
 
 #### Step 2: Configure Environment
 

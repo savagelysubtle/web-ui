@@ -48,10 +48,11 @@ dependencies = [
     ]
 
     [project.urls]
-    "Bug Tracker" = "https://github.com/browser-use/web-ui/issues"
-    Documentation = "https://docs.browser-use.com"
-    Homepage      = "https://github.com/browser-use/web-ui"
-    Repository    = "https://github.com/browser-use/web-ui"
+    "Bug Tracker"         = "https://github.com/savagelysubtle/web-ui/issues"
+    Documentation         = "https://docs.browser-use.com"
+    Homepage              = "https://github.com/savagelysubtle/web-ui"
+    Repository            = "https://github.com/savagelysubtle/web-ui"
+    "Upstream Repository" = "https://github.com/browser-use/web-ui"
 
     [project.scripts]
     webui = "webui:main"
