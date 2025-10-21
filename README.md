@@ -23,77 +23,92 @@ We would like to officially thank [WarmShao](https://github.com/warmshao) for hi
 
 ## Installation Guide
 
-### Option 1: Local Installation
+### Option 1: Windows UV Installation (Recommended)
 
-Read the [quickstart guide](https://docs.browser-use.com/quickstart#prepare-the-environment) or follow the steps below to get started.
+This guide focuses on Windows installation using UV package manager for optimal performance and modern Python development.
 
-#### Step 1: Clone the Repository
+#### Prerequisites
 
-```bash
+- **Windows 10/11** (64-bit)
+- **PowerShell 5.1+** or **PowerShell Core 7+**
+- **Git** for Windows
+
+#### Step 1: Install UV Package Manager
+
+```powershell
+# Install UV using winget (Windows Package Manager)
+winget install astral-sh.uv
+
+# Or download from: https://github.com/astral-sh/uv/releases
+```
+
+#### Step 2: Clone the Repository
+
+```powershell
 git clone https://github.com/browser-use/web-ui.git
 cd web-ui
 ```
 
-#### Step 2: Set Up Python Environment
+#### Step 3: Set Up Python Environment
 
-We recommend using [uv](https://docs.astral.sh/uv/) for managing the Python environment.
-
-Using uv (recommended):
-
-```bash
-# Install Python 3.14t (free-threaded variant) if not already installed
+```powershell
+# Install Python 3.14t (free-threaded variant) for best performance
 uv python install 3.14t
 
 # Create virtual environment with Python 3.14t
 uv venv --python 3.14t
+
+# Activate the virtual environment
+.\.venv\Scripts\Activate.ps1
 ```
 
 > **Note:** Python 3.14t is the free-threaded variant that removes the Global Interpreter Lock (GIL) for better parallel performance. You can also use Python 3.11+ if preferred: `uv venv --python 3.11`
 
-Activate the virtual environment:
-
-- Windows (Command Prompt):
-
-```cmd
-.venv\Scripts\activate
-```
-
-- Windows (PowerShell):
+#### Step 4: Install Dependencies
 
 ```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-- macOS/Linux:
-
-```bash
-source .venv/bin/activate
-```
-
-#### Step 3: Install Dependencies
-
-Install Python packages using UV:
-
-```bash
+# Install all dependencies using UV (faster than pip)
 uv sync
-```
 
-Alternatively, if you want to install from requirements.txt:
-
-```bash
-uv pip install -r requirements.txt
-```
-
-Install Browsers in playwright:
-
-```bash
+# Install Playwright browsers
 playwright install --with-deps
+
+# Or install specific browser
+playwright install chromium --with-deps
 ```
 
-Or you can install specific browsers by running:
+#### Step 5: Configure Environment
 
-```bash
-playwright install chromium --with-deps
+```powershell
+# Copy environment template
+Copy-Item .env.example .env
+
+# Edit .env with your API keys and settings
+notepad .env
+```
+
+#### Step 6: Run the Application
+
+```powershell
+# Start the WebUI
+python webui.py
+
+# Or with custom settings
+python webui.py --ip 0.0.0.0 --port 8080 --theme Ocean
+```
+
+### Option 2: Traditional pip Installation
+
+If you prefer using pip instead of UV:
+
+```powershell
+# Create virtual environment
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+# Install dependencies
+pip install -r requirements.txt
+playwright install --with-deps
 ```
 
 #### Step 4: Configure Environment
@@ -144,57 +159,35 @@ cp .env.example .env
     - Open the WebUI in a non-Chrome browser, such as Firefox or Edge. This is important because the persistent browser context will use the Chrome data when running the agent.
     - Check the "Use Own Browser" option within the Browser Settings.
 
-### Option 2: Docker Installation
+### Option 3: Docker Installation (Alternative)
+
+> **Note:** Docker installation is available but not recommended for Windows users. The UV installation above provides better performance and easier debugging on Windows.
 
 #### Prerequisites
 
-- Docker and Docker Compose installed
-  - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (For Windows/macOS)
-  - [Docker Engine](https://docs.docker.com/engine/install/) and [Docker Compose](https://docs.docker.com/compose/install/) (For Linux)
+- Docker Desktop for Windows
+- WSL2 enabled (recommended)
 
-#### Step 1: Clone the Repository
+#### Quick Docker Setup
 
-```bash
+```powershell
+# Clone repository
 git clone https://github.com/browser-use/web-ui.git
 cd web-ui
-```
 
-#### Step 2: Configure Environment
+# Copy environment file
+Copy-Item .env.example .env
 
-1. Create a copy of the example environment file:
-
-- Windows (Command Prompt):
-
-```bash
-copy .env.example .env
-```
-
-- macOS/Linux/Windows (PowerShell):
-
-```bash
-cp .env.example .env
-```
-
-2. Open `.env` in your preferred text editor and add your API keys and other settings
-
-#### Step 3: Docker Build and Run
-
-```bash
+# Build and run with Docker Compose
 docker compose up --build
 ```
 
-For ARM64 systems (e.g., Apple Silicon Macs), please run follow command:
+#### Access Points
 
-```bash
-TARGETPLATFORM=linux/arm64 docker compose up --build
-```
+- **Web-UI**: `http://localhost:7788`
+- **VNC Viewer**: `http://localhost:6080/vnc.html` (password: "youvncpassword")
 
-#### Step 4: Enjoy the web-ui and vnc
-
-- Web-UI: Open `http://localhost:7788` in your browser
-- VNC Viewer (for watching browser interactions): Open `http://localhost:6080/vnc.html`
-  - Default VNC password: "youvncpassword"
-  - Can be changed by setting `VNC_PASSWORD` in your `.env` file
+> **Windows Users**: For better performance and easier debugging, we recommend using the UV installation method above instead of Docker.
 
 ## Changelog
 
