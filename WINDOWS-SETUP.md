@@ -7,10 +7,11 @@ This guide provides detailed instructions for setting up Browser Use Web UI on W
 ### Automated Setup (Recommended)
 
 1. **Download the setup script:**
+
    ```powershell
    # PowerShell (Recommended)
    .\setup-windows.ps1
-   
+
    # Or Command Prompt
    setup-windows.bat
    ```
@@ -20,6 +21,7 @@ This guide provides detailed instructions for setting up Browser Use Web UI on W
 3. **Edit your `.env` file** with API keys
 
 4. **Start the application:**
+
    ```powershell
    python webui.py
    ```
@@ -127,6 +129,7 @@ ANONYMIZED_TELEMETRY=false
 To use your existing Chrome profile:
 
 1. **Set environment variables:**
+
    ```env
    USE_OWN_BROWSER=true
    BROWSER_PATH="C:\Program Files\Google\Chrome\Application\chrome.exe"
@@ -184,12 +187,14 @@ pytest -v
 ### Common Issues
 
 #### UV Not Found
+
 ```powershell
 # Add UV to PATH manually
 $env:PATH += ";C:\Users\$env:USERNAME\.cargo\bin"
 ```
 
 #### Python Version Issues
+
 ```powershell
 # List available Python versions
 uv python list
@@ -199,6 +204,7 @@ uv python install 3.11
 ```
 
 #### Playwright Browser Issues
+
 ```powershell
 # Reinstall browsers
 playwright install --force
@@ -208,6 +214,7 @@ playwright install chromium --with-deps
 ```
 
 #### Permission Issues
+
 ```powershell
 # Run PowerShell as Administrator
 # Or set execution policy
@@ -215,6 +222,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
 #### Port Already in Use
+
 ```powershell
 # Use different port
 python webui.py --port 8080

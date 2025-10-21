@@ -34,7 +34,7 @@ try {
     Write-Host "✅ UV: $uvVersion" -ForegroundColor Green
 } catch {
     Write-Host "❌ UV is not installed. Installing UV..." -ForegroundColor Yellow
-    
+
     # Try to install UV using winget
     try {
         winget install astral-sh.uv
