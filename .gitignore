@@ -189,4 +189,7 @@ data/
 .config.pkl
 *.pdf
 
+# MCP Configuration (User-specific)
+mcp.json
+
 workflow

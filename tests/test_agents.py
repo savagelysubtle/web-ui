@@ -1,33 +1,24 @@
-import pdb
-
-from dotenv import load_dotenv
-
-load_dotenv()
-import sys
-
-sys.path.append(".")
 import asyncio
 import os
+import pdb
 import sys
 from pprint import pprint
 
-from browser_use import Agent
 from browser_use.agent.views import AgentHistoryList
+from dotenv import load_dotenv
 
-from src.utils import utils
+load_dotenv()
+sys.path.append(".")
 
 
 async def test_browser_use_agent():
-    from browser_use.browser.browser import Browser, BrowserConfig
-    from browser_use.browser.context import (
-        BrowserContextConfig
-    )
-    from browser_use.agent.service import Agent
+    from browser_use.browser.browser import BrowserConfig
+    from browser_use.browser.context import BrowserContextConfig
 
-    from src.browser.custom_browser import CustomBrowser
-    from src.controller.custom_controller import CustomController
-    from src.utils import llm_provider
-    from src.agent.browser_use.browser_use_agent import BrowserUseAgent
+    from src.web_ui.agent.browser_use.browser_use_agent import BrowserUseAgent
+    from src.web_ui.browser.custom_browser import CustomBrowser
+    from src.web_ui.controller.custom_controller import CustomController
+    from src.web_ui.utils import llm_provider
 
     llm = llm_provider.get_llm_model(
         provider="openai",
@@ -85,19 +76,13 @@ async def test_browser_use_agent():
             # },
             "desktop-commander": {
                 "command": "npx",
-                "args": [
-                    "-y",
-                    "@wonderwhy-er/desktop-commander"
-                ]
+                "args": ["-y", "@wonderwhy-er/desktop-commander"],
             },
         }
     }
     controller = CustomController()
     await controller.setup_mcp_client(mcp_server_config)
     use_own_browser = True
-    use_vision = True  # Set to False when using DeepSeek
-
-    max_actions_per_step = 10
     browser = None
     browser_context = None
 
@@ -120,7 +105,7 @@ async def test_browser_use_agent():
                 new_context_config=BrowserContextConfig(
                     window_width=window_w,
                     window_height=window_h,
-                )
+                ),
             )
         )
         browser_context = await browser.new_context(
@@ -139,9 +124,9 @@ async def test_browser_use_agent():
             browser=browser,
             browser_context=browser_context,
             controller=controller,
-            use_vision=use_vision,
-            max_actions_per_step=max_actions_per_step,
-            generate_gif=True
+            use_vision=True,
+            max_actions_per_step=10,
+            generate_gif=True,
         )
         history: AgentHistoryList = await agent.run(max_steps=100)
 
@@ -153,6 +138,7 @@ async def test_browser_use_agent():
 
     except Exception:
         import traceback
+
         traceback.print_exc()
     finally:
         if browser_context:
@@ -164,16 +150,15 @@ async def test_browser_use_agent():
 
 
 async def test_browser_use_parallel():
-    from browser_use.browser.browser import Browser, BrowserConfig
+    from browser_use.browser.browser import BrowserConfig
     from browser_use.browser.context import (
         BrowserContextConfig,
     )
-    from browser_use.agent.service import Agent
 
-    from src.browser.custom_browser import CustomBrowser
-    from src.controller.custom_controller import CustomController
-    from src.utils import llm_provider
-    from src.agent.browser_use.browser_use_agent import BrowserUseAgent
+    from src.web_ui.agent.browser_use.browser_use_agent import BrowserUseAgent
+    from src.web_ui.browser.custom_browser import CustomBrowser
+    from src.web_ui.controller.custom_controller import CustomController
+    from src.web_ui.utils import llm_provider
 
     # llm = utils.get_llm_model(
     #     provider="openai",
@@ -233,10 +218,7 @@ async def test_browser_use_parallel():
             # },
             "desktop-commander": {
                 "command": "npx",
-                "args": [
-                    "-y",
-                    "@wonderwhy-er/desktop-commander"
-                ]
+                "args": ["-y", "@wonderwhy-er/desktop-commander"],
             },
             # "filesystem": {
             #     "command": "npx",
@@ -251,9 +233,6 @@ async def test_browser_use_parallel():
     controller = CustomController()
     await controller.setup_mcp_client(mcp_server_config)
     use_own_browser = True
-    use_vision = True  # Set to False when using DeepSeek
-
-    max_actions_per_step = 10
     browser = None
     browser_context = None
 
@@ -276,7 +255,7 @@ async def test_browser_use_parallel():
                 new_context_config=BrowserContextConfig(
                     window_width=window_w,
                     window_height=window_h,
-                )
+                ),
             )
         )
         browser_context = await browser.new_context(
@@ -286,30 +265,31 @@ async def test_browser_use_parallel():
                 save_downloads_path="./tmp/downloads",
                 window_height=window_h,
                 window_width=window_w,
-                force_new_context=True
+                force_new_context=True,
             )
         )
         agents = [
             BrowserUseAgent(task=task, llm=llm, browser=browser, controller=controller)
             for task in [
-                'Search Google for weather in Tokyo',
+                "Search Google for weather in Tokyo",
                 # 'Check Reddit front page title',
                 # 'Find NASA image of the day',
                 # 'Check top story on CNN',
                 # 'Search latest SpaceX launch date',
                 # 'Look up population of Paris',
-                'Find current time in Sydney',
-                'Check who won last Super Bowl',
+                "Find current time in Sydney",
+                "Check who won last Super Bowl",
                 # 'Search trending topics on Twitter',
             ]
         ]
 
-        history = await asyncio.gather(*[agent.run() for agent in agents])
-        print("Final Result:")
-        pprint(history.final_result(), indent=4)
-
-        print("\nErrors:")
-        pprint(history.errors(), indent=4)
+        histories = await asyncio.gather(*[agent.run() for agent in agents])
+        print("Final Results:")
+        for i, history in enumerate(histories):
+            print(f"Agent {i + 1}:")
+            pprint(history.final_result(), indent=4)
+            print(f"Errors: {history.errors()}")
+            print()
 
         pdb.set_trace()
 
@@ -327,14 +307,12 @@ async def test_browser_use_parallel():
 
 
 async def test_deep_research_agent():
-    from src.agent.deep_research.deep_research_agent import DeepResearchAgent, PLAN_FILENAME, REPORT_FILENAME
-    from src.utils import llm_provider
-
-    llm = llm_provider.get_llm_model(
-        provider="openai",
-        model_name="gpt-4o",
-        temperature=0.5
+    from src.web_ui.agent.deep_research.deep_research_agent import (
+        DeepResearchAgent,
     )
+    from src.web_ui.utils import llm_provider
+
+    llm = llm_provider.get_llm_model(provider="openai", model_name="gpt-4o", temperature=0.5)
 
     # llm = llm_provider.get_llm_model(
     #     provider="bedrock",
@@ -344,16 +322,20 @@ async def test_deep_research_agent():
         "mcpServers": {
             "desktop-commander": {
                 "command": "npx",
-                "args": [
-                    "-y",
-                    "@wonderwhy-er/desktop-commander"
-                ]
+                "args": ["-y", "@wonderwhy-er/desktop-commander"],
             },
         }
     }
 
-    browser_config = {"headless": False, "window_width": 1280, "window_height": 1100, "use_own_browser": False}
-    agent = DeepResearchAgent(llm=llm, browser_config=browser_config, mcp_server_config=mcp_server_config)
+    browser_config = {
+        "headless": False,
+        "window_width": 1280,
+        "window_height": 1100,
+        "use_own_browser": False,
+    }
+    agent = DeepResearchAgent(
+        llm=llm, browser_config=browser_config, mcp_server_config=mcp_server_config
+    )
     research_topic = "Give me investment advices of nvidia and tesla."
     task_id_to_resume = ""  # Set this to resume a previous task ID
 
@@ -361,11 +343,12 @@ async def test_deep_research_agent():
 
     try:
         # Call run and wait for the final result dictionary
-        result = await agent.run(research_topic,
-                                 task_id=task_id_to_resume,
-                                 save_dir="./tmp/deep_research",
-                                 max_parallel_browsers=1,
-                                 )
+        result = await agent.run(
+            research_topic,
+            task_id=task_id_to_resume,
+            save_dir="./tmp/deep_research",
+            max_parallel_browsers=1,
+        )
 
         print("\n--- Research Process Ended ---")
         print(f"Status: {result.get('status')}")
@@ -373,14 +356,17 @@ async def test_deep_research_agent():
         print(f"Task ID: {result.get('task_id')}")
 
         # Check the final state for the report
-        final_state = result.get('final_state', {})
+        final_state = result.get("final_state", {})
         if final_state:
             print("\n--- Final State Summary ---")
             print(
-                f"  Plan Steps Completed: {sum(1 for item in final_state.get('research_plan', []) if item.get('status') == 'completed')}")
+                f"  Plan Steps Completed: {sum(1 for item in final_state.get('research_plan', []) if item.get('status') == 'completed')}"
+            )
             print(f"  Total Search Results Logged: {len(final_state.get('search_results', []))}")
             if final_state.get("final_report"):
-                print("  Final Report: Generated (content omitted). You can find it in the output directory.")
+                print(
+                    "  Final Report: Generated (content omitted). You can find it in the output directory."
+                )
                 # print("\n--- Final Report ---") # Optionally print report
                 # print(final_state["final_report"])
             else:
@@ -388,9 +374,8 @@ async def test_deep_research_agent():
         else:
             print("Final state information not available.")
 
-
     except Exception as e:
-        print(f"\n--- An unhandled error occurred outside the agent run ---")
+        print("\n--- An unhandled error occurred outside the agent run ---")
         print(e)
 
 

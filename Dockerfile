@@ -1,4 +1,4 @@
-FROM python:3.11-slim-bookworm
+FROM python:3.14-slim-bookworm
 
 # Set platform for multi-arch builds (Docker Buildx will set this)
 ARG TARGETPLATFORM
@@ -47,6 +47,9 @@ RUN apt-get update && apt-get install -y \
     vim \
     && rm -rf /var/lib/apt/lists/*
 
+# Install UV - fast Python package manager
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
 # Install noVNC
 RUN git clone https://github.com/novnc/noVNC.git /opt/novnc \
     && git clone https://github.com/novnc/websockify /opt/novnc/utils/websockify \
@@ -66,9 +69,16 @@ RUN node -v && npm -v && npx -v
 # Set up working directory
 WORKDIR /app
 
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy dependency files
+COPY pyproject.toml requirements.txt ./
+
+# Set UV environment variables for better Docker performance
+ENV UV_SYSTEM_PYTHON=1 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
+
+# Install Python dependencies using UV
+RUN uv pip install --system -r requirements.txt
 
 # Playwright setup
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-browsers
@@ -79,6 +89,9 @@ RUN PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=0 playwright install chromium
 
 # Copy application code
 COPY . .
+
+# Install project in editable mode if using pyproject.toml directly
+RUN uv pip install --system -e .
 
 # Set up supervisor configuration
 RUN mkdir -p /var/log/supervisor

@@ -19,13 +19,13 @@ license = { text = "MIT" }
 maintainers = [
     { name = "Shaun", email = "simpleflowworks@gmail.com" },
 ]
-name = "browser-use-web-ui"
+name = "web-ui"
 readme = "README.md"
 requires-python = ">=3.11,<3.15"
 version = "0.1.0"
 
 dependencies = [
-    "browser-use>=0.1.48",
+    "browser-use==0.1.48",
     "pyperclip>=1.9.0",
     "gradio>=5.27.0",
     "json-repair>=0.25.0",
@@ -39,14 +39,6 @@ dependencies = [
     "python-dotenv>=1.0.0",
 ]
 
-    [project.optional-dependencies]
-    dev = [
-        "ruff>=0.8.0",
-        "pytest>=8.0.0",
-        "pytest-asyncio>=0.23.0",
-        "ty>=0.0.1a23",
-    ]
-
     [project.urls]
     "Bug Tracker" = "https://github.com/browser-use/web-ui/issues"
     Documentation = "https://docs.browser-use.com"
@@ -56,20 +48,21 @@ dependencies = [
     [project.scripts]
     webui = "webui:main"
 
-[build-system]
-build-backend = "uv_build"
-requires      = [ "uv_build>=0.9.4,<0.10.0" ] #!! AI LEAVE THIS IS CORRECT
-
-[tool.uv.build]
-packages = [ "src/webui" ]
-
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "ruff>=0.8.0",
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
     "ty>=0.0.1a23",
 ]
+
+[tool.setuptools]
+# Package discovery for UV build backend
+packages = { find = { where = [ "src" ], include = [ "web_ui*" ] } }
+
+[build-system]
+build-backend = "uv_build"
+requires      = [ "uv_build>=0.9.4,<0.10.0" ] #!! AI LEAVE THIS IS CORRECT
 
 [tool.ruff]
 line-length    = 100

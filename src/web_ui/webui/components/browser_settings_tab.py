@@ -1,13 +1,29 @@
-import os
-from distutils.util import strtobool
-import gradio as gr
 import logging
-from gradio.components import Component
+import os
 
-from src.webui.webui_manager import WebuiManager
-from src.utils import config
+import gradio as gr
+
+from src.web_ui.webui.webui_manager import WebuiManager
+
+
+def strtobool(val):
+    """Convert a string representation of truth to true (1) or false (0).
+
+    True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values
+    are 'n', 'no', 'f', 'false', 'off', and '0'.  Raises ValueError if
+    'val' is anything else.
+    """
+    val = val.lower()
+    if val in ("y", "yes", "t", "true", "on", "1"):
+        return 1
+    elif val in ("n", "no", "f", "false", "off", "0"):
+        return 0
+    else:
+        raise ValueError("invalid truth value %r" % (val,))
+
 
 logger = logging.getLogger(__name__)
+
 
 async def close_browser(webui_manager: WebuiManager):
     """
@@ -27,11 +43,11 @@ async def close_browser(webui_manager: WebuiManager):
         await webui_manager.bu_browser.close()
         webui_manager.bu_browser = None
 
+
 def create_browser_settings_tab(webui_manager: WebuiManager):
     """
     Creates a browser settings tab.
     """
-    input_components = set(webui_manager.get_components())
     tab_components = {}
 
     with gr.Group():
@@ -40,7 +56,7 @@ def create_browser_settings_tab(webui_manager: WebuiManager):
                 label="Browser Binary Path",
                 lines=1,
                 interactive=True,
-                placeholder="e.g. '/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome'"
+                placeholder="e.g. '/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome'",
             )
             browser_user_data_dir = gr.Textbox(
                 label="Browser User Data Dir",
@@ -54,40 +70,31 @@ def create_browser_settings_tab(webui_manager: WebuiManager):
                 label="Use Own Browser",
                 value=bool(strtobool(os.getenv("USE_OWN_BROWSER", "false"))),
                 info="Use your existing browser instance",
-                interactive=True
+                interactive=True,
             )
             keep_browser_open = gr.Checkbox(
                 label="Keep Browser Open",
                 value=bool(strtobool(os.getenv("KEEP_BROWSER_OPEN", "true"))),
                 info="Keep Browser Open between Tasks",
-                interactive=True
+                interactive=True,
             )
             headless = gr.Checkbox(
-                label="Headless Mode",
-                value=False,
-                info="Run browser without GUI",
-                interactive=True
+                label="Headless Mode", value=False, info="Run browser without GUI", interactive=True
             )
             disable_security = gr.Checkbox(
                 label="Disable Security",
                 value=False,
                 info="Disable browser security",
-                interactive=True
+                interactive=True,
             )
 
     with gr.Group():
         with gr.Row():
             window_w = gr.Number(
-                label="Window Width",
-                value=1280,
-                info="Browser window width",
-                interactive=True
+                label="Window Width", value=1280, info="Browser window width", interactive=True
             )
             window_h = gr.Number(
-                label="Window Height",
-                value=1100,
-                info="Browser window height",
-                interactive=True
+                label="Window Height", value=1100, info="Browser window height", interactive=True
             )
     with gr.Group():
         with gr.Row():
@@ -132,22 +139,22 @@ def create_browser_settings_tab(webui_manager: WebuiManager):
                 interactive=True,
             )
     tab_components.update(
-        dict(
-            browser_binary_path=browser_binary_path,
-            browser_user_data_dir=browser_user_data_dir,
-            use_own_browser=use_own_browser,
-            keep_browser_open=keep_browser_open,
-            headless=headless,
-            disable_security=disable_security,
-            save_recording_path=save_recording_path,
-            save_trace_path=save_trace_path,
-            save_agent_history_path=save_agent_history_path,
-            save_download_path=save_download_path,
-            cdp_url=cdp_url,
-            wss_url=wss_url,
-            window_h=window_h,
-            window_w=window_w,
-        )
+        {
+            "browser_binary_path": browser_binary_path,
+            "browser_user_data_dir": browser_user_data_dir,
+            "use_own_browser": use_own_browser,
+            "keep_browser_open": keep_browser_open,
+            "headless": headless,
+            "disable_security": disable_security,
+            "save_recording_path": save_recording_path,
+            "save_trace_path": save_trace_path,
+            "save_agent_history_path": save_agent_history_path,
+            "save_download_path": save_download_path,
+            "cdp_url": cdp_url,
+            "wss_url": wss_url,
+            "window_h": window_h,
+            "window_w": window_w,
+        }
     )
     webui_manager.add_components("browser_settings", tab_components)
 

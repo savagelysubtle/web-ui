@@ -1,73 +1,42 @@
-from openai import OpenAI
-import pdb
-from langchain_openai import ChatOpenAI
-from langchain_core.globals import get_llm_cache
+import os
+from typing import (
+    Any,
+)
+
+from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models.base import (
-    BaseLanguageModel,
-    LangSmithParams,
     LanguageModelInput,
 )
-import os
-from langchain_core.load import dumpd, dumps
 from langchain_core.messages import (
     AIMessage,
     SystemMessage,
-    AnyMessage,
-    BaseMessage,
-    BaseMessageChunk,
-    HumanMessage,
-    convert_to_messages,
-    message_chunk_to_message,
 )
-from langchain_core.outputs import (
-    ChatGeneration,
-    ChatGenerationChunk,
-    ChatResult,
-    LLMResult,
-    RunInfo,
-)
-from langchain_ollama import ChatOllama
-from langchain_core.output_parsers.base import OutputParserLike
-from langchain_core.runnables import Runnable, RunnableConfig
-from langchain_core.tools import BaseTool
-
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Literal,
-    Optional,
-    Union,
-    cast, List,
-)
-from langchain_anthropic import ChatAnthropic
-from langchain_mistralai import ChatMistralAI
+from langchain_core.runnables import RunnableConfig
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_ibm import ChatWatsonx
+from langchain_mistralai import ChatMistralAI
 from langchain_ollama import ChatOllama
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
-from langchain_ibm import ChatWatsonx
-from langchain_aws import ChatBedrock
+from openai import OpenAI
 from pydantic import SecretStr
 
-from src.utils import config
+from src.web_ui.utils import config
 
 
 class DeepSeekR1ChatOpenAI(ChatOpenAI):
-
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.client = OpenAI(
-            base_url=kwargs.get("base_url"),
-            api_key=kwargs.get("api_key")
+            base_url=kwargs.get("openai_api_base"), api_key=kwargs.get("openai_api_key")
         )
 
     async def ainvoke(
-            self,
-            input: LanguageModelInput,
-            config: Optional[RunnableConfig] = None,
-            *,
-            stop: Optional[list[str]] = None,
-            **kwargs: Any,
+        self,
+        input: LanguageModelInput,
+        config: RunnableConfig | None = None,
+        *,
+        stop: list[str] | None = None,
+        **kwargs: Any,
     ) -> AIMessage:
         message_history = []
         for input_ in input:
@@ -79,8 +48,7 @@ class DeepSeekR1ChatOpenAI(ChatOpenAI):
                 message_history.append({"role": "user", "content": input_.content})
 
         response = self.client.chat.completions.create(
-            model=self.model_name,
-            messages=message_history
+            model=self.model_name, messages=message_history
         )
 
         reasoning_content = response.choices[0].message.reasoning_content
@@ -88,12 +56,12 @@ class DeepSeekR1ChatOpenAI(ChatOpenAI):
         return AIMessage(content=content, reasoning_content=reasoning_content)
 
     def invoke(
-            self,
-            input: LanguageModelInput,
-            config: Optional[RunnableConfig] = None,
-            *,
-            stop: Optional[list[str]] = None,
-            **kwargs: Any,
+        self,
+        input: LanguageModelInput,
+        config: RunnableConfig | None = None,
+        *,
+        stop: list[str] | None = None,
+        **kwargs: Any,
     ) -> AIMessage:
         message_history = []
         for input_ in input:
@@ -105,8 +73,7 @@ class DeepSeekR1ChatOpenAI(ChatOpenAI):
                 message_history.append({"role": "user", "content": input_.content})
 
         response = self.client.chat.completions.create(
-            model=self.model_name,
-            messages=message_history
+            model=self.model_name, messages=message_history
         )
 
         reasoning_content = response.choices[0].message.reasoning_content
@@ -115,14 +82,13 @@ class DeepSeekR1ChatOpenAI(ChatOpenAI):
 
 
 class DeepSeekR1ChatOllama(ChatOllama):
-
     async def ainvoke(
-            self,
-            input: LanguageModelInput,
-            config: Optional[RunnableConfig] = None,
-            *,
-            stop: Optional[list[str]] = None,
-            **kwargs: Any,
+        self,
+        input: LanguageModelInput,
+        config: RunnableConfig | None = None,
+        *,
+        stop: list[str] | None = None,
+        **kwargs: Any,
     ) -> AIMessage:
         org_ai_message = await super().ainvoke(input=input)
         org_content = org_ai_message.content
@@ -133,12 +99,12 @@ class DeepSeekR1ChatOllama(ChatOllama):
         return AIMessage(content=content, reasoning_content=reasoning_content)
 
     def invoke(
-            self,
-            input: LanguageModelInput,
-            config: Optional[RunnableConfig] = None,
-            *,
-            stop: Optional[list[str]] = None,
-            **kwargs: Any,
+        self,
+        input: LanguageModelInput,
+        config: RunnableConfig | None = None,
+        *,
+        stop: list[str] | None = None,
+        **kwargs: Any,
     ) -> AIMessage:
         org_ai_message = super().invoke(input=input)
         org_content = org_ai_message.content
@@ -174,10 +140,10 @@ def get_llm_model(provider: str, **kwargs):
         return ChatAnthropic(
             model=kwargs.get("model_name", "claude-3-5-sonnet-20241022"),
             temperature=kwargs.get("temperature", 0.0),
-            base_url=base_url,
-            api_key=api_key,
+            anthropic_api_url=base_url,
+            anthropic_api_key=SecretStr(api_key) if api_key else None,
         )
-    elif provider == 'mistral':
+    elif provider == "mistral":
         if not kwargs.get("base_url", ""):
             base_url = os.getenv("MISTRAL_ENDPOINT", "https://api.mistral.ai/v1")
         else:
@@ -190,8 +156,8 @@ def get_llm_model(provider: str, **kwargs):
         return ChatMistralAI(
             model=kwargs.get("model_name", "mistral-large-latest"),
             temperature=kwargs.get("temperature", 0.0),
-            base_url=base_url,
-            api_key=api_key,
+            endpoint=base_url,
+            mistral_api_key=SecretStr(api_key) if api_key else None,
         )
     elif provider == "openai":
         if not kwargs.get("base_url", ""):
@@ -200,10 +166,10 @@ def get_llm_model(provider: str, **kwargs):
             base_url = kwargs.get("base_url")
 
         return ChatOpenAI(
-            model=kwargs.get("model_name", "gpt-4o"),
+            model_name=kwargs.get("model_name", "gpt-4o"),
             temperature=kwargs.get("temperature", 0.0),
-            base_url=base_url,
-            api_key=api_key,
+            openai_api_base=base_url,
+            openai_api_key=SecretStr(api_key) if api_key else None,
         )
     elif provider == "grok":
         if not kwargs.get("base_url", ""):
@@ -212,10 +178,10 @@ def get_llm_model(provider: str, **kwargs):
             base_url = kwargs.get("base_url")
 
         return ChatOpenAI(
-            model=kwargs.get("model_name", "grok-3"),
+            model_name=kwargs.get("model_name", "grok-3"),
             temperature=kwargs.get("temperature", 0.0),
-            base_url=base_url,
-            api_key=api_key,
+            openai_api_base=base_url,
+            openai_api_key=SecretStr(api_key) if api_key else None,
         )
     elif provider == "deepseek":
         if not kwargs.get("base_url", ""):
@@ -225,23 +191,23 @@ def get_llm_model(provider: str, **kwargs):
 
         if kwargs.get("model_name", "deepseek-chat") == "deepseek-reasoner":
             return DeepSeekR1ChatOpenAI(
-                model=kwargs.get("model_name", "deepseek-reasoner"),
+                model_name=kwargs.get("model_name", "deepseek-reasoner"),
                 temperature=kwargs.get("temperature", 0.0),
-                base_url=base_url,
-                api_key=api_key,
+                openai_api_base=base_url,
+                openai_api_key=api_key,
             )
         else:
             return ChatOpenAI(
-                model=kwargs.get("model_name", "deepseek-chat"),
+                model_name=kwargs.get("model_name", "deepseek-chat"),
                 temperature=kwargs.get("temperature", 0.0),
-                base_url=base_url,
-                api_key=api_key,
+                openai_api_base=base_url,
+                openai_api_key=SecretStr(api_key) if api_key else None,
             )
     elif provider == "google":
         return ChatGoogleGenerativeAI(
             model=kwargs.get("model_name", "gemini-2.0-flash-exp"),
             temperature=kwargs.get("temperature", 0.0),
-            api_key=api_key,
+            google_api_key=SecretStr(api_key) if api_key else None,
         )
     elif provider == "ollama":
         if not kwargs.get("base_url", ""):
@@ -269,30 +235,34 @@ def get_llm_model(provider: str, **kwargs):
             base_url = os.getenv("AZURE_OPENAI_ENDPOINT", "")
         else:
             base_url = kwargs.get("base_url")
-        api_version = kwargs.get("api_version", "") or os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview")
+        api_version = kwargs.get("api_version", "") or os.getenv(
+            "AZURE_OPENAI_API_VERSION", "2025-01-01-preview"
+        )
         return AzureChatOpenAI(
-            model=kwargs.get("model_name", "gpt-4o"),
+            model_name=kwargs.get("model_name", "gpt-4o"),
             temperature=kwargs.get("temperature", 0.0),
             api_version=api_version,
             azure_endpoint=base_url,
-            api_key=api_key,
+            api_key=SecretStr(api_key) if api_key else None,
         )
     elif provider == "alibaba":
         if not kwargs.get("base_url", ""):
-            base_url = os.getenv("ALIBABA_ENDPOINT", "https://dashscope.aliyuncs.com/compatible-mode/v1")
+            base_url = os.getenv(
+                "ALIBABA_ENDPOINT", "https://dashscope.aliyuncs.com/compatible-mode/v1"
+            )
         else:
             base_url = kwargs.get("base_url")
 
         return ChatOpenAI(
-            model=kwargs.get("model_name", "qwen-plus"),
+            model_name=kwargs.get("model_name", "qwen-plus"),
             temperature=kwargs.get("temperature", 0.0),
-            base_url=base_url,
-            api_key=api_key,
+            openai_api_base=base_url,
+            openai_api_key=SecretStr(api_key) if api_key else None,
         )
     elif provider == "ibm":
         parameters = {
             "temperature": kwargs.get("temperature", 0.0),
-            "max_tokens": kwargs.get("num_ctx", 32000)
+            "max_tokens": kwargs.get("num_ctx", 32000),
         }
         if not kwargs.get("base_url", ""):
             base_url = os.getenv("IBM_ENDPOINT", "https://us-south.ml.cloud.ibm.com")
@@ -301,24 +271,24 @@ def get_llm_model(provider: str, **kwargs):
 
         return ChatWatsonx(
             model_id=kwargs.get("model_name", "ibm/granite-vision-3.1-2b-preview"),
-            url=base_url,
+            url=SecretStr(base_url) if base_url else SecretStr(""),
             project_id=os.getenv("IBM_PROJECT_ID"),
-            apikey=os.getenv("IBM_API_KEY"),
-            params=parameters
+            apikey=SecretStr(os.getenv("IBM_API_KEY") or ""),
+            params=parameters,
         )
     elif provider == "moonshot":
         return ChatOpenAI(
-            model=kwargs.get("model_name", "moonshot-v1-32k-vision-preview"),
+            model_name=kwargs.get("model_name", "moonshot-v1-32k-vision-preview"),
             temperature=kwargs.get("temperature", 0.0),
-            base_url=os.getenv("MOONSHOT_ENDPOINT"),
-            api_key=os.getenv("MOONSHOT_API_KEY"),
+            openai_api_base=os.getenv("MOONSHOT_ENDPOINT"),
+            openai_api_key=SecretStr(os.getenv("MOONSHOT_API_KEY") or ""),
         )
     elif provider == "unbound":
         return ChatOpenAI(
-            model=kwargs.get("model_name", "gpt-4o-mini"),
+            model_name=kwargs.get("model_name", "gpt-4o-mini"),
             temperature=kwargs.get("temperature", 0.0),
-            base_url=os.getenv("UNBOUND_ENDPOINT", "https://api.getunbound.ai"),
-            api_key=api_key,
+            openai_api_base=os.getenv("UNBOUND_ENDPOINT", "https://api.getunbound.ai"),
+            openai_api_key=SecretStr(api_key) if api_key else None,
         )
     elif provider == "siliconflow":
         if not kwargs.get("api_key", ""):
@@ -330,8 +300,8 @@ def get_llm_model(provider: str, **kwargs):
         else:
             base_url = kwargs.get("base_url")
         return ChatOpenAI(
-            api_key=api_key,
-            base_url=base_url,
+            openai_api_key=SecretStr(api_key) if api_key else None,
+            openai_api_base=base_url,
             model_name=kwargs.get("model_name", "Qwen/QwQ-32B"),
             temperature=kwargs.get("temperature", 0.0),
         )
@@ -345,11 +315,11 @@ def get_llm_model(provider: str, **kwargs):
         else:
             base_url = kwargs.get("base_url")
         return ChatOpenAI(
-            api_key=api_key,
-            base_url=base_url,
+            openai_api_key=SecretStr(api_key) if api_key else None,
+            openai_api_base=base_url,
             model_name=kwargs.get("model_name", "Qwen/QwQ-32B"),
             temperature=kwargs.get("temperature", 0.0),
-            extra_body = {"enable_thinking": False}
+            extra_body={"enable_thinking": False},
         )
     else:
         raise ValueError(f"Unsupported provider: {provider}")

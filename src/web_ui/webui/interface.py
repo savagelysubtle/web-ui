@@ -1,11 +1,12 @@
 import gradio as gr
 
-from src.webui.webui_manager import WebuiManager
-from src.webui.components.agent_settings_tab import create_agent_settings_tab
-from src.webui.components.browser_settings_tab import create_browser_settings_tab
-from src.webui.components.browser_use_agent_tab import create_browser_use_agent_tab
-from src.webui.components.deep_research_agent_tab import create_deep_research_agent_tab
-from src.webui.components.load_save_config_tab import create_load_save_config_tab
+from src.web_ui.webui.components.agent_settings_tab import create_agent_settings_tab
+from src.web_ui.webui.components.browser_settings_tab import create_browser_settings_tab
+from src.web_ui.webui.components.browser_use_agent_tab import create_browser_use_agent_tab
+from src.web_ui.webui.components.deep_research_agent_tab import create_deep_research_agent_tab
+from src.web_ui.webui.components.load_save_config_tab import create_load_save_config_tab
+from src.web_ui.webui.components.mcp_settings_tab import create_mcp_settings_tab
+from src.web_ui.webui.webui_manager import WebuiManager
 
 theme_map = {
     "Default": gr.themes.Default(),
@@ -15,15 +16,15 @@ theme_map = {
     "Origin": gr.themes.Origin(),
     "Citrus": gr.themes.Citrus(),
     "Ocean": gr.themes.Ocean(),
-    "Base": gr.themes.Base()
+    "Base": gr.themes.Base(),
 }
 
 
 def create_ui(theme_name="Ocean"):
     css = """
     .gradio-container {
-        width: 70vw !important; 
-        max-width: 70% !important; 
+        width: 70vw !important;
+        max-width: 70% !important;
         margin-left: auto !important;
         margin-right: auto !important;
         padding-top: 10px !important;
@@ -57,7 +58,10 @@ def create_ui(theme_name="Ocean"):
     ui_manager = WebuiManager()
 
     with gr.Blocks(
-            title="Browser Use WebUI", theme=theme_map[theme_name], css=css, js=js_func,
+        title="Browser Use WebUI",
+        theme=theme_map[theme_name],
+        css=css,
+        js=js_func,
     ) as demo:
         with gr.Row():
             gr.Markdown(
@@ -68,12 +72,15 @@ def create_ui(theme_name="Ocean"):
                 elem_classes=["header-text"],
             )
 
-        with gr.Tabs() as tabs:
+        with gr.Tabs():
             with gr.TabItem("⚙️ Agent Settings"):
                 create_agent_settings_tab(ui_manager)
 
             with gr.TabItem("🌐 Browser Settings"):
                 create_browser_settings_tab(ui_manager)
+
+            with gr.TabItem("🔌 MCP Settings"):
+                create_mcp_settings_tab(ui_manager)
 
             with gr.TabItem("🤖 Run Agent"):
                 create_browser_use_agent_tab(ui_manager)

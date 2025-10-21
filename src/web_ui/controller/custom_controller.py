@@ -1,47 +1,36 @@
-import pdb
-
-import pyperclip
-from typing import Optional, Type, Callable, Dict, Any, Union, Awaitable, TypeVar
-from pydantic import BaseModel
-from browser_use.agent.views import ActionResult
-from browser_use.browser.context import BrowserContext
-from browser_use.controller.service import Controller, DoneAction
-from browser_use.controller.registry.service import Registry, RegisteredAction
-from main_content_extractor import MainContentExtractor
-from browser_use.controller.views import (
-    ClickElementAction,
-    DoneAction,
-    ExtractPageContentAction,
-    GoToUrlAction,
-    InputTextAction,
-    OpenTabAction,
-    ScrollAction,
-    SearchGoogleAction,
-    SendKeysAction,
-    SwitchTabAction,
-)
-import logging
 import inspect
-import asyncio
+import logging
 import os
-from langchain_core.language_models.chat_models import BaseChatModel
+from collections.abc import Awaitable, Callable
+from typing import Any, TypeVar
+
 from browser_use.agent.views import ActionModel, ActionResult
-
-from src.utils.mcp_client import create_tool_param_model, setup_mcp_client_and_tools
-
+from browser_use.browser.context import BrowserContext
+from browser_use.controller.registry.service import RegisteredAction
+from browser_use.controller.service import Controller
 from browser_use.utils import time_execution_sync
+from langchain_core.language_models.chat_models import BaseChatModel
+from pydantic import BaseModel
+
+from src.web_ui.utils.mcp_client import create_tool_param_model, setup_mcp_client_and_tools
+from src.web_ui.utils.mcp_config import load_mcp_config
 
 logger = logging.getLogger(__name__)
 
-Context = TypeVar('Context')
+Context = TypeVar("Context")
 
 
 class CustomController(Controller):
-    def __init__(self, exclude_actions: list[str] = [],
-                 output_model: Optional[Type[BaseModel]] = None,
-                 ask_assistant_callback: Optional[Union[Callable[[str, BrowserContext], Dict[str, Any]], Callable[
-                     [str, BrowserContext], Awaitable[Dict[str, Any]]]]] = None,
-                 ):
+    def __init__(
+        self,
+        exclude_actions: list[str] | None = None,
+        output_model: type[BaseModel] | None = None,
+        ask_assistant_callback: Callable[[str, BrowserContext], dict[str, Any]]
+        | Callable[[str, BrowserContext], Awaitable[dict[str, Any]]]
+        | None = None,
+    ):
+        if exclude_actions is None:
+            exclude_actions = []
         super().__init__(exclude_actions=exclude_actions, output_model=output_model)
         self._register_custom_actions()
         self.ask_assistant_callback = ask_assistant_callback
@@ -67,56 +56,60 @@ class CustomController(Controller):
                 logger.info(msg)
                 return ActionResult(extracted_content=msg, include_in_memory=True)
             else:
-                return ActionResult(extracted_content="Human cannot help you. Please try another way.",
-                                    include_in_memory=True)
+                return ActionResult(
+                    extracted_content="Human cannot help you. Please try another way.",
+                    include_in_memory=True,
+                )
 
         @self.registry.action(
-            'Upload file to interactive element with file path ',
+            "Upload file to interactive element with file path ",
         )
-        async def upload_file(index: int, path: str, browser: BrowserContext, available_file_paths: list[str]):
+        async def upload_file(
+            index: int, path: str, browser: BrowserContext, available_file_paths: list[str]
+        ):
             if path not in available_file_paths:
-                return ActionResult(error=f'File path {path} is not available')
+                return ActionResult(error=f"File path {path} is not available")
 
             if not os.path.exists(path):
-                return ActionResult(error=f'File {path} does not exist')
+                return ActionResult(error=f"File {path} does not exist")
 
             dom_el = await browser.get_dom_element_by_index(index)
 
             file_upload_dom_el = dom_el.get_file_upload_element()
 
             if file_upload_dom_el is None:
-                msg = f'No file upload element found at index {index}'
+                msg = f"No file upload element found at index {index}"
                 logger.info(msg)
                 return ActionResult(error=msg)
 
             file_upload_el = await browser.get_locate_element(file_upload_dom_el)
 
             if file_upload_el is None:
-                msg = f'No file upload element found at index {index}'
+                msg = f"No file upload element found at index {index}"
                 logger.info(msg)
                 return ActionResult(error=msg)
 
             try:
                 await file_upload_el.set_input_files(path)
-                msg = f'Successfully uploaded file to index {index}'
+                msg = f"Successfully uploaded file to index {index}"
                 logger.info(msg)
                 return ActionResult(extracted_content=msg, include_in_memory=True)
             except Exception as e:
-                msg = f'Failed to upload file to index {index}: {str(e)}'
+                msg = f"Failed to upload file to index {index}: {str(e)}"
                 logger.info(msg)
                 return ActionResult(error=msg)
 
-    @time_execution_sync('--act')
+    @time_execution_sync("--act")
     async def act(
-            self,
-            action: ActionModel,
-            browser_context: Optional[BrowserContext] = None,
-            #
-            page_extraction_llm: Optional[BaseChatModel] = None,
-            sensitive_data: Optional[Dict[str, str]] = None,
-            available_file_paths: Optional[list[str]] = None,
-            #
-            context: Context | None = None,
+        self,
+        action: ActionModel,
+        browser_context: BrowserContext | None = None,
+        #
+        page_extraction_llm: BaseChatModel | None = None,
+        sensitive_data: dict[str, str] | None = None,
+        available_file_paths: list[str] | None = None,
+        #
+        context: Context | None = None,
     ) -> ActionResult:
         """Execute an action"""
 
@@ -146,16 +139,38 @@ class CustomController(Controller):
                     elif result is None:
                         return ActionResult()
                     else:
-                        raise ValueError(f'Invalid action result type: {type(result)} of {result}')
+                        raise ValueError(f"Invalid action result type: {type(result)} of {result}")
             return ActionResult()
         except Exception as e:
             raise e
 
-    async def setup_mcp_client(self, mcp_server_config: Optional[Dict[str, Any]] = None):
+    async def setup_mcp_client(self, mcp_server_config: dict[str, Any] | None = None):
+        """
+        Setup MCP client with provided config or auto-load from mcp.json.
+
+        Args:
+            mcp_server_config: Optional MCP server configuration dict.
+                              If None, attempts to load from mcp.json file.
+        """
+        # If no config provided, try to load from file
+        if mcp_server_config is None:
+            logger.info("No MCP config provided, attempting to load from mcp.json")
+            mcp_server_config = load_mcp_config()
+
+            if mcp_server_config is None:
+                logger.info("No MCP configuration file found. MCP tools will not be available.")
+                return
+
         self.mcp_server_config = mcp_server_config
+
+        # Setup client and register tools
         if self.mcp_server_config:
             self.mcp_client = await setup_mcp_client_and_tools(self.mcp_server_config)
-            self.register_mcp_tools()
+            if self.mcp_client:
+                self.register_mcp_tools()
+                logger.info("MCP client setup completed successfully")
+            else:
+                logger.warning("MCP client setup failed")
 
     def register_mcp_tools(self):
         """
@@ -165,18 +180,80 @@ class CustomController(Controller):
             for server_name in self.mcp_client.server_name_to_tools:
                 for tool in self.mcp_client.server_name_to_tools[server_name]:
                     tool_name = f"mcp.{server_name}.{tool.name}"
+                    param_model_class = create_tool_param_model(tool)
                     self.registry.registry.actions[tool_name] = RegisteredAction(
                         name=tool_name,
                         description=tool.description,
                         function=tool,
-                        param_model=create_tool_param_model(tool),
+                        param_model=param_model_class,
                     )
                     logger.info(f"Add mcp tool: {tool_name}")
                 logger.debug(
-                    f"Registered {len(self.mcp_client.server_name_to_tools[server_name])} mcp tools for {server_name}")
+                    f"Registered {len(self.mcp_client.server_name_to_tools[server_name])} mcp tools for {server_name}"
+                )
         else:
-            logger.warning(f"MCP client not started.")
+            logger.warning("MCP client not started.")
 
     async def close_mcp_client(self):
+        """Close MCP client and cleanup resources."""
         if self.mcp_client:
-            await self.mcp_client.__aexit__(None, None, None)
+            try:
+                await self.mcp_client.__aexit__(None, None, None)
+                logger.info("MCP client closed successfully")
+            except Exception as e:
+                logger.error(f"Error closing MCP client: {e}", exc_info=True)
+            finally:
+                self.mcp_client = None
+
+    async def reload_mcp_client(self, mcp_server_config: dict[str, Any] | None = None):
+        """
+        Reload MCP client with new configuration.
+
+        This closes the existing client and sets up a new one.
+
+        Args:
+            mcp_server_config: Optional new MCP server configuration dict.
+                              If None, reloads from mcp.json file.
+        """
+        logger.info("Reloading MCP client...")
+
+        # Close existing client
+        await self.close_mcp_client()
+
+        # Unregister existing MCP tools
+        if self.registry and hasattr(self.registry, "registry"):
+            tools_to_remove = [
+                name for name in self.registry.registry.actions.keys() if name.startswith("mcp.")
+            ]
+            for tool_name in tools_to_remove:
+                del self.registry.registry.actions[tool_name]
+                logger.debug(f"Removed MCP tool: {tool_name}")
+
+        # Setup new client
+        await self.setup_mcp_client(mcp_server_config)
+        logger.info("MCP client reload completed")
+
+    def get_registered_mcp_tools(self) -> dict[str, list[str]]:
+        """
+        Get list of currently registered MCP tools grouped by server.
+
+        Returns:
+            Dictionary mapping server names to lists of tool names
+        """
+        tools_by_server = {}
+
+        if self.registry and hasattr(self.registry, "registry"):
+            for tool_name in self.registry.registry.actions.keys():
+                if tool_name.startswith("mcp."):
+                    # Parse tool name: mcp.{server_name}.{tool_name}
+                    parts = tool_name.split(".", 2)
+                    if len(parts) >= 3:
+                        server_name = parts[1]
+                        actual_tool_name = parts[2]
+
+                        if server_name not in tools_by_server:
+                            tools_by_server[server_name] = []
+
+                        tools_by_server[server_name].append(actual_tool_name)
+
+        return tools_by_server

@@ -1,22 +1,17 @@
-import json
-from collections.abc import Generator
-from typing import TYPE_CHECKING
-import os
-import gradio as gr
-from datetime import datetime
-from typing import Optional, Dict, List
-import uuid
 import asyncio
+import json
+import os
 import time
+from datetime import datetime
 
-from gradio.components import Component
-from browser_use.browser.browser import Browser
-from browser_use.browser.context import BrowserContext
+import gradio as gr
 from browser_use.agent.service import Agent
-from src.browser.custom_browser import CustomBrowser
-from src.browser.custom_context import CustomBrowserContext
-from src.controller.custom_controller import CustomController
-from src.agent.deep_research.deep_research_agent import DeepResearchAgent
+from gradio.components import Component
+
+from src.web_ui.agent.deep_research.deep_research_agent import DeepResearchAgent
+from src.web_ui.browser.custom_browser import CustomBrowser
+from src.web_ui.browser.custom_context import CustomBrowserContext
+from src.web_ui.controller.custom_controller import CustomController
 
 
 class WebuiManager:
@@ -31,26 +26,27 @@ class WebuiManager:
         """
         init browser use agent
         """
-        self.bu_agent: Optional[Agent] = None
-        self.bu_browser: Optional[CustomBrowser] = None
-        self.bu_browser_context: Optional[CustomBrowserContext] = None
-        self.bu_controller: Optional[CustomController] = None
-        self.bu_chat_history: List[Dict[str, Optional[str]]] = []
-        self.bu_response_event: Optional[asyncio.Event] = None
-        self.bu_user_help_response: Optional[str] = None
-        self.bu_current_task: Optional[asyncio.Task] = None
-        self.bu_agent_task_id: Optional[str] = None
+        self.bu_agent: Agent | None = None
+        self.bu_browser: CustomBrowser | None = None
+        self.bu_browser_context: CustomBrowserContext | None = None
+        self.bu_controller: CustomController | None = None
+        self.bu_chat_history: list[dict[str, str | None]] = []
+        self.bu_response_event: asyncio.Event | None = None
+        self.bu_user_help_response: str | None = None
+        self.bu_current_task: asyncio.Task | None = None
+        self.bu_agent_task_id: str | None = None
 
     def init_deep_research_agent(self) -> None:
         """
         init deep research agent
         """
-        self.dr_agent: Optional[DeepResearchAgent] = None
+        self.dr_agent: DeepResearchAgent | None = None
         self.dr_current_task = None
-        self.dr_agent_task_id: Optional[str] = None
-        self.dr_save_dir: Optional[str] = None
+        self.dr_agent_task_id: str | None = None
+        self.dr_task_id: str | None = None
+        self.dr_save_dir: str | None = None
 
-    def add_components(self, tab_name: str, components_dict: dict[str, "Component"]) -> None:
+    def add_components(self, tab_name: str, components_dict: dict[str, Component]) -> None:
         """
         Add tab components
         """
@@ -59,32 +55,42 @@ class WebuiManager:
             self.id_to_component[comp_id] = component
             self.component_to_id[component] = comp_id
 
-    def get_components(self) -> list["Component"]:
+    def get_components(self) -> list[Component]:
         """
         Get all components
         """
         return list(self.id_to_component.values())
 
-    def get_component_by_id(self, comp_id: str) -> "Component":
+    def get_component_by_id(self, comp_id: str) -> Component:
         """
         Get component by id
         """
         return self.id_to_component[comp_id]
 
-    def get_id_by_component(self, comp: "Component") -> str:
+    def get_id_by_component(self, comp: Component) -> str:
         """
         Get id by component
         """
         return self.component_to_id[comp]
 
-    def save_config(self, components: Dict["Component", str]) -> None:
+    def save_config(self, *args) -> str:
         """
         Save config
         """
+        # Convert args to components dict
+        components = {}
+        all_components = list(self.id_to_component.values())
+        for i, comp in enumerate(all_components):
+            if i < len(args):
+                components[comp] = args[i]
+
         cur_settings = {}
         for comp in components:
-            if not isinstance(comp, gr.Button) and not isinstance(comp, gr.File) and str(
-                    getattr(comp, "interactive", True)).lower() != "false":
+            if (
+                not isinstance(comp, gr.Button)
+                and not isinstance(comp, gr.File)
+                and str(getattr(comp, "interactive", True)).lower() != "false"
+            ):
                 comp_id = self.get_id_by_component(comp)
                 cur_settings[comp_id] = components[comp]
 
@@ -98,7 +104,7 @@ class WebuiManager:
         """
         Load config
         """
-        with open(config_path, "r") as fr:
+        with open(config_path) as fr:
             ui_settings = json.load(fr)
 
         update_components = {}
@@ -116,7 +122,9 @@ class WebuiManager:
         config_status = self.id_to_component["load_save_config.config_status"]
         update_components.update(
             {
-                config_status: config_status.__class__(value=f"Successfully loaded config: {config_path}")
+                config_status: config_status.__class__(
+                    value=f"Successfully loaded config: {config_path}"
+                )
             }
         )
         yield update_components
