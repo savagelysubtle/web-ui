@@ -4,8 +4,9 @@ Agent tracer for execution observability.
 
 import logging
 import uuid
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator
+from typing import Any
 
 from src.web_ui.observability.trace_models import ExecutionTrace, SpanType, TraceSpan
 
@@ -52,7 +53,7 @@ class AgentTracer:
     @asynccontextmanager
     async def span(
         self, name: str, span_type: SpanType, inputs: dict[str, Any] | None = None, **metadata
-    ) -> AsyncGenerator[TraceSpan, None]:
+    ) -> AsyncGenerator[TraceSpan]:
         """Context manager for creating spans."""
         import time
 
@@ -99,4 +100,3 @@ class AgentTracer:
     def get_current_span(self) -> TraceSpan | None:
         """Get the current (top-level) span."""
         return self.span_stack[-1] if self.span_stack else None
-
