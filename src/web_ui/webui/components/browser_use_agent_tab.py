@@ -30,6 +30,7 @@ from src.web_ui.webui.components.chat_formatter import (
     CHAT_FORMATTING_CSS,
     CHAT_FORMATTING_JS,
     format_agent_message,
+    format_error_message,
 )
 from src.web_ui.webui.webui_manager import WebuiManager
 
@@ -724,17 +725,17 @@ async def run_agent_task(
             final_update[chatbot_comp] = gr.update(value=webui_manager.bu_chat_history)
         except Exception as e:
             logger.error(f"Error during agent execution: {e}", exc_info=True)
-            error_message = f"**Agent Execution Error:**\n```\n{type(e).__name__}: {e}\n```"
+            error_message = format_error_message(e, context="Agent execution", include_traceback=True)
             if not any(
-                error_message in (msg.get("content") or "")
-                for msg in webui_manager.bu_chat_history
+                "error-container" in (msg.get("content") or "")
+                for msg in webui_manager.bu_chat_history[-3:]  # Check last 3 messages
                 if msg.get("role") == "assistant"
             ):
                 webui_manager.bu_chat_history.append(
                     {"role": "assistant", "content": error_message}
                 )
             final_update[chatbot_comp] = gr.update(value=webui_manager.bu_chat_history)
-            gr.Error(f"Agent execution failed: {e}")
+            gr.Error(f"Agent execution failed: {type(e).__name__}")
 
         finally:
             webui_manager.bu_current_task = None  # Clear the task reference
@@ -784,7 +785,7 @@ async def run_agent_task(
             clear_button_comp: gr.update(interactive=True),
             chatbot_comp: gr.update(
                 value=webui_manager.bu_chat_history
-                + [{"role": "assistant", "content": f"**Setup Error:** {e}"}]
+                + [{"role": "assistant", "content": format_error_message(e, context="Agent setup", include_traceback=True)}]
             ),
         }
 
