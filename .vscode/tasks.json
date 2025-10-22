@@ -258,7 +258,7 @@
       "command": "powershell",
       "args": [
         "-Command",
-        "$lines = netstat -ano | findstr :7788; if ($lines) { $line = $lines[0]; $parts = $line.Split(' ', [System.StringSplitOptions]::RemoveEmptyEntries); $pid = $parts[-1]; Write-Host \"Killing process $pid on port 7788...\"; taskkill /PID $pid /F 2>&1 | Out-Null; Write-Host \"Process killed successfully.\" } else { Write-Host \"No process found on port 7788.\" }"
+        "$line = netstat -ano | findstr :7788 | Select-Object -First 1; if ($line) { $tokens = -split $line.Trim(); $processId = $tokens[-1]; Write-Host \"Killing process $processId on port 7788...\"; taskkill /PID $processId /F 2>&1 | Out-Null; Write-Host \"Process killed successfully.\" } else { Write-Host \"No process found on port 7788.\" }"
       ],
       "group": "build",
       "presentation": {
@@ -274,7 +274,7 @@
       "command": "powershell",
       "args": [
         "-Command",
-        "$lines = netstat -ano | findstr :8080; if ($lines) { $line = $lines[0]; $parts = $line.Split(' ', [System.StringSplitOptions]::RemoveEmptyEntries); $pid = $parts[-1]; Write-Host \"Killing process $pid on port 8080...\"; taskkill /PID $pid /F 2>&1 | Out-Null; Write-Host \"Process killed successfully.\" } else { Write-Host \"No process found on port 8080.\" }"
+        "$line = netstat -ano | findstr :8080 | Select-Object -First 1; if ($line) { $tokens = -split $line.Trim(); $processId = $tokens[-1]; Write-Host \"Killing process $processId on port 8080...\"; taskkill /PID $processId /F 2>&1 | Out-Null; Write-Host \"Process killed successfully.\" } else { Write-Host \"No process found on port 8080.\" }"
       ],
       "group": "build",
       "presentation": {
