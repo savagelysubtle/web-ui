@@ -47,14 +47,14 @@ async def test_mcp_client():
 
     # Get tools from the client
     mcp_tools = []
-    if hasattr(mcp_client, "clients"):
-        for _server_name, server_client in mcp_client.clients.items():
-            tools = await server_client.list_tools()
+    if hasattr(mcp_client, "clients") and hasattr(mcp_client.clients, "items"):
+        for _server_name, server_client in mcp_client.clients.items():  # type: ignore[attr-defined]
+            tools = await server_client.list_tools()  # type: ignore[attr-defined]
             mcp_tools.extend(tools)
     else:
         # Alternative approach if clients attribute doesn't exist
         try:
-            tools = await mcp_client.list_tools()
+            tools = await mcp_client.list_tools()  # type: ignore[attr-defined]
             mcp_tools.extend(tools)
         except Exception as e:
             print(f"Failed to get tools: {e}")
@@ -68,7 +68,7 @@ async def test_mcp_client():
             print(tool_param_model().model_json_schema())
         except AttributeError:
             # Fallback for older Pydantic versions
-            print(tool_param_model().schema())
+            print(tool_param_model().schema())  # type: ignore[deprecated]
     pdb.set_trace()
 
 

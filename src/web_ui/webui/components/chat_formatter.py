@@ -190,7 +190,7 @@ def add_copy_button(content: str, label: str = "Copy") -> str:
 
 
 def format_error_message(
-    error: Exception | str, context: str = None, include_traceback: bool = False
+    error: Exception | str, context: str | None = None, include_traceback: bool = False
 ) -> str:
     """
     Format error messages in a user-friendly way.

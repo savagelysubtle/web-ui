@@ -43,7 +43,7 @@ def format_workflow_for_display(workflow_data: dict[str, Any]) -> dict[str, Any]
         return {"message": "No workflow data available"}
 
     # Create a more readable structure
-    formatted = {
+    formatted: dict[str, Any] = {
         "summary": {
             "total_nodes": workflow_data.get("metadata", {}).get("total_nodes", 0),
             "total_edges": workflow_data.get("metadata", {}).get("total_edges", 0),
@@ -77,7 +77,9 @@ def format_workflow_for_display(workflow_data: dict[str, Any]) -> dict[str, Any]
         elif node.get("type") in ("result", "error"):
             step["result"] = node_data.get("result") or node_data.get("error")
 
-        formatted["steps"].append(step)
+        steps = formatted.get("steps")
+        if isinstance(steps, list):
+            steps.append(step)
 
     return formatted
 
@@ -107,7 +109,8 @@ def generate_workflow_status_markdown(workflow_data: dict[str, Any]) -> str:
     node_data = current_node.get("data", {})
     status = node_data.get("status", "unknown")
     label = node_data.get("label", "Step")
-    icon = node_data.get("icon", "⚡")
+    # icon is not currently used but kept for future extensibility
+    _ = node_data.get("icon", "⚡")
 
     # Build status message
     status_emoji = {

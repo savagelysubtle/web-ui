@@ -22,6 +22,12 @@ class WebuiManager:
         self.settings_save_dir = settings_save_dir
         os.makedirs(self.settings_save_dir, exist_ok=True)
 
+        # Dashboard state management
+        self.settings_panel_visible: bool = False
+        self.current_agent_type: str = "browser_use"  # "browser_use" or "deep_research"
+        self.recent_tasks: list[dict] = []  # List of recent task executions
+        self.token_usage: dict = {"used": 0, "cost": 0.0}  # Token usage tracking
+
     def init_browser_use_agent(self) -> None:
         """
         init browser use agent
@@ -128,3 +134,67 @@ class WebuiManager:
             }
         )
         yield update_components
+
+    def toggle_settings_panel(self) -> bool:
+        """
+        Toggle the settings panel visibility.
+
+        Returns:
+            bool: New visibility state
+        """
+        self.settings_panel_visible = not self.settings_panel_visible
+        return self.settings_panel_visible
+
+    def add_recent_task(self, task: str, success: bool = True, result: str | None = None) -> None:
+        """
+        Add a task to recent tasks history.
+
+        Args:
+            task: Task description
+            success: Whether the task completed successfully
+            result: Optional result summary
+        """
+        from datetime import datetime
+
+        task_entry = {
+            "task": task,
+            "success": success,
+            "result": result,
+            "timestamp": datetime.now().strftime("%H:%M:%S"),
+        }
+
+        self.recent_tasks.append(task_entry)
+
+        # Keep only last 20 tasks
+        if len(self.recent_tasks) > 20:
+            self.recent_tasks = self.recent_tasks[-20:]
+
+    def update_token_usage(self, tokens: int, cost: float = 0.0) -> None:
+        """
+        Update token usage statistics.
+
+        Args:
+            tokens: Number of tokens used
+            cost: Estimated cost in USD
+        """
+        self.token_usage["used"] += tokens
+        self.token_usage["cost"] += cost
+
+    def reset_token_usage(self) -> None:
+        """Reset token usage statistics."""
+        self.token_usage = {"used": 0, "cost": 0.0}
+
+    def get_status_summary(self) -> dict:
+        """
+        Get a summary of current system status.
+
+        Returns:
+            dict with status information
+        """
+        return {
+            "settings_visible": self.settings_panel_visible,
+            "current_agent": self.current_agent_type,
+            "browser_open": bool(self.bu_browser),
+            "recent_task_count": len(self.recent_tasks),
+            "token_usage": self.token_usage,
+        }

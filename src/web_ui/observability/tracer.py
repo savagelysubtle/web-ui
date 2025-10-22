@@ -32,7 +32,7 @@ class AgentTracer:
         logger.info(f"Started trace {trace_id} for task: {task[:50]}")
         return self.current_trace
 
-    def end_trace(self, success: bool, final_output: Any = None, error: str = None):
+    def end_trace(self, success: bool, final_output: Any = None, error: str | None = None):
         """End the current trace."""
         import time
 

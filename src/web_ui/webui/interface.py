@@ -1,12 +1,21 @@
 import gradio as gr
 
-from src.web_ui.webui.components.agent_settings_tab import create_agent_settings_tab
-from src.web_ui.webui.components.browser_settings_tab import create_browser_settings_tab
-from src.web_ui.webui.components.browser_use_agent_tab import create_browser_use_agent_tab
-from src.web_ui.webui.components.deep_research_agent_tab import create_deep_research_agent_tab
-from src.web_ui.webui.components.load_save_config_tab import create_load_save_config_tab
+from src.web_ui.webui.components.browser_use_agent_tab import (
+    handle_clear,
+    handle_pause_resume,
+    handle_stop,
+    handle_submit,
+    run_agent_task,
+)
+from src.web_ui.webui.components.dashboard_main import create_dashboard_main
+from src.web_ui.webui.components.dashboard_settings import create_dashboard_settings
+from src.web_ui.webui.components.dashboard_sidebar import create_dashboard_sidebar
+from src.web_ui.webui.components.deep_research_agent_tab import (
+    run_deep_research,
+    stop_deep_research,
+)
+from src.web_ui.webui.components.help_modal import create_help_modal
 from src.web_ui.webui.components.mcp_settings_tab import create_mcp_settings_tab
-from src.web_ui.webui.components.quick_start_tab import create_quick_start_tab
 from src.web_ui.webui.webui_manager import WebuiManager
 
 theme_map = {
@@ -24,34 +33,38 @@ theme_map = {
 def create_ui(theme_name="Ocean"):
     css = """
     .gradio-container {
-        width: 85vw !important;
-        max-width: 85% !important;
+        width: 95vw !important;
+        max-width: 95% !important;
         margin-left: auto !important;
         margin-right: auto !important;
         padding-top: 10px !important;
     }
 
-    /* Enhanced Header Styles */
+    /* Header Styles */
     .header-container {
         text-align: center;
-        padding: 25px 20px;
+        padding: 20px;
         background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(168, 85, 247, 0.12));
-        border-radius: 16px;
-        margin-bottom: 20px;
-    }
-    .header-main {
+        border-radius: 12px;
+        margin-bottom: 16px;
         display: flex;
+        justify-content: space-between;
         align-items: center;
-        justify-content: center;
-        gap: 12px;
-        margin-bottom: 8px;
     }
-    .header-icon {
-        font-size: 32px;
+    .header-left {
+        flex: 1;
+    }
+    .header-center {
+        flex: 2;
+        text-align: center;
+    }
+    .header-right {
+        flex: 1;
+        text-align: right;
     }
     .header-title {
         margin: 0;
-        font-size: 2em;
+        font-size: 1.8em;
         font-weight: 700;
         background: linear-gradient(135deg, #6366f1, #a855f7);
         -webkit-background-clip: text;
@@ -59,30 +72,136 @@ def create_ui(theme_name="Ocean"):
         background-clip: text;
     }
     .header-tagline {
-        font-size: 1.1em;
-        margin: 8px 0 16px 0;
-        opacity: 0.9;
+        font-size: 0.95em;
+        opacity: 0.8;
+        margin-top: 4px;
     }
-    .header-features {
+
+    /* Dashboard Layout */
+    .dashboard-container {
         display: flex;
-        gap: 12px;
-        justify-content: center;
-        flex-wrap: wrap;
+        gap: 16px;
+        min-height: calc(100vh - 250px);
     }
-    .feature-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 14px;
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 20px;
-        font-size: 0.9em;
-        font-weight: 500;
+
+    .dashboard-sidebar {
+        width: 250px;
+        min-width: 250px;
+        border-right: 1px solid rgba(128, 128, 128, 0.2);
+        padding-right: 16px;
+        overflow-y: auto;
     }
-    .badge-icon {
+
+    .dashboard-main {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0 16px;
+    }
+
+    .dashboard-settings {
+        width: 400px;
+        min-width: 400px;
+        max-width: 400px;
+        overflow-y: auto;
+        border-left: 1px solid rgba(128, 128, 128, 0.2);
+        padding-left: 16px;
+    }
+
+    /* Status Cards */
+    .status-card {
+        background: rgba(99, 102, 241, 0.05);
+        border: 1px solid rgba(99, 102, 241, 0.2);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 12px;
+    }
+    .status-card h3 {
+        margin-top: 0;
         font-size: 1.1em;
+        margin-bottom: 12px;
+    }
+
+    /* Preset Buttons */
+    .preset-button-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+    .preset-button {
+        width: 100%;
+        text-align: left !important;
+    }
+
+    /* History List */
+    .history-list {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+    .history-item {
+        padding: 8px;
+        border-left: 2px solid rgba(99, 102, 241, 0.3);
+        margin-bottom: 8px;
+        font-size: 0.9em;
+        cursor: pointer;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 4px;
+    }
+    .history-item:hover {
+        background: rgba(99, 102, 241, 0.1);
+    }
+
+
+    /* Help Modal */
+    .help-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    }
+    .help-modal-content {
+        background: var(--body-background-fill);
+        padding: 30px;
+        border-radius: 12px;
+        max-width: 800px;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    /* MCP Settings Modal */
+    .mcp-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+    }
+    .mcp-modal-content {
+        background: var(--body-background-fill);
+        padding: 30px;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 1000px;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Agent Selector */
+    .agent-selector {
+        margin-bottom: 16px;
     }
 
     /* Loading States */
@@ -97,82 +216,6 @@ def create_ui(theme_name="Ocean"):
     @keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
-    }
-    .empty-state {
-        text-align: center;
-        padding: 60px 20px;
-        color: rgba(128, 128, 128, 0.8);
-    }
-    .empty-state-icon {
-        font-size: 48px;
-        margin-bottom: 16px;
-    }
-
-    /* Existing Styles */
-    .header-text {
-        text-align: center;
-        margin-bottom: 15px;
-        padding: 20px;
-        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1));
-        border-radius: 12px;
-    }
-    .tab-header-text {
-        text-align: center;
-        font-size: 1.1em;
-        margin-bottom: 15px;
-    }
-    .settings-card {
-        border: 1px solid rgba(128, 128, 128, 0.2);
-        border-radius: 10px;
-        padding: 15px;
-        margin-bottom: 15px;
-        background: rgba(0, 0, 0, 0.02);
-    }
-    .main-tabs > .tab-nav > button {
-        font-size: 1.05em;
-        font-weight: 500;
-        padding: 12px 20px;
-    }
-    .secondary-tabs > .tab-nav > button {
-        font-size: 0.95em;
-        padding: 8px 16px;
-    }
-    .status-badge {
-        display: inline-block;
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-size: 0.85em;
-        font-weight: 500;
-        margin-left: 8px;
-    }
-    .preset-description {
-        font-size: 0.9em;
-        color: rgba(128, 128, 128, 0.9);
-        margin-top: -8px;
-        margin-bottom: 12px;
-    }
-    .preset-status {
-        padding: 12px;
-        border-radius: 8px;
-        background: rgba(99, 102, 241, 0.1);
-        margin-top: 15px;
-    }
-    .status-display {
-        padding: 15px;
-        border-radius: 10px;
-        background: rgba(0, 0, 0, 0.02);
-        border: 1px solid rgba(128, 128, 128, 0.2);
-    }
-    .gr-group {
-        margin-bottom: 12px;
-    }
-    .primary-button {
-        background: linear-gradient(135deg, #6366f1, #a855f7) !important;
-        border: none !important;
-        font-weight: 500;
-    }
-    .secondary-button {
-        border: 1px solid rgba(128, 128, 128, 0.3) !important;
     }
 
     /* Notification System */
@@ -196,56 +239,6 @@ def create_ui(theme_name="Ocean"):
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         animation: slideIn 0.3s forwards;
     }
-    .notification-icon {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 18px;
-        font-weight: bold;
-        flex-shrink: 0;
-    }
-    .notification-success .notification-icon {
-        background: #10b981;
-        color: white;
-    }
-    .notification-error .notification-icon {
-        background: #ef4444;
-        color: white;
-    }
-    .notification-warning .notification-icon {
-        background: #f59e0b;
-        color: white;
-    }
-    .notification-info .notification-icon {
-        background: #3b82f6;
-        color: white;
-    }
-    .notification-content {
-        flex: 1;
-    }
-    .notification-content strong {
-        display: block;
-        margin-bottom: 4px;
-    }
-    .notification-content p {
-        margin: 0;
-        font-size: 0.9em;
-        opacity: 0.8;
-    }
-    .notification-close {
-        background: none;
-        border: none;
-        font-size: 24px;
-        cursor: pointer;
-        opacity: 0.5;
-        transition: opacity 0.2s;
-    }
-    .notification-close:hover {
-        opacity: 1;
-    }
     @keyframes slideIn {
         from {
             transform: translateX(400px);
@@ -256,111 +249,39 @@ def create_ui(theme_name="Ocean"):
             opacity: 1;
         }
     }
-    @keyframes slideOut {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(400px);
-            opacity: 0;
+
+    /* Improved button styles */
+    .gr-button {
+        border-radius: 6px;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    .gr-button-primary {
+        background: linear-gradient(135deg, #6366f1, #a855f7) !important;
+        border: none !important;
+    }
+    .gr-button-secondary {
+        border: 1px solid rgba(99, 102, 241, 0.3) !important;
+    }
+
+    /* Desktop-first responsiveness */
+    @media (max-width: 1400px) {
+        .dashboard-settings {
+            width: 350px;
+            min-width: 350px;
+            max-width: 350px;
         }
     }
 
-    /* Keyboard Shortcuts Modal */
-    .shortcuts-modal {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 10000;
-    }
-    .shortcuts-content {
-        background: var(--body-background-fill);
-        padding: 30px;
-        border-radius: 12px;
-        max-width: 500px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-    }
-    .shortcut-list {
-        margin: 20px 0;
-    }
-    .shortcut-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 12px;
-        border-bottom: 1px solid rgba(128, 128, 128, 0.1);
-    }
-    .shortcut-item:last-child {
-        border-bottom: none;
-    }
-    kbd {
-        display: inline-block;
-        padding: 3px 6px;
-        font-family: monospace;
-        font-size: 0.85em;
-        background: rgba(0, 0, 0, 0.1);
-        border: 1px solid rgba(0, 0, 0, 0.2);
-        border-radius: 3px;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Focus Indicators */
-    *:focus-visible {
-        outline: 2px solid #6366f1;
-        outline-offset: 2px;
-        border-radius: 4px;
-    }
-
-    /* Mobile Responsiveness */
-    @media (max-width: 768px) {
-        .gradio-container {
-            width: 95vw !important;
-            max-width: 95% !important;
-            padding: 5px !important;
-        }
-        .header-container {
-            padding: 15px;
-            font-size: 0.9em;
-        }
-        .header-title {
-            font-size: 1.5em !important;
-        }
-        .header-features {
-            flex-direction: column;
-        }
-        .main-tabs > .tab-nav {
-            overflow-x: auto;
-            white-space: nowrap;
-        }
-        .main-tabs > .tab-nav > button {
-            min-width: auto;
-            padding: 10px 15px;
-            font-size: 0.9em;
-        }
-        button, .gr-button {
-            min-height: 44px;
-            min-width: 44px;
-        }
-        .gr-form {
-            flex-direction: column !important;
-        }
-    }
-    @media (max-width: 480px) {
-        .feature-badge {
-            font-size: 0.8em;
-            padding: 4px 10px;
+    @media (max-width: 1200px) {
+        .dashboard-sidebar {
+            width: 220px;
+            min-width: 220px;
         }
     }
     """
 
-    # Enhanced JavaScript features - loaded safely after page ready
+    # Enhanced JavaScript features
     js_func = """
     function refresh() {
         const url = new URL(window.location);
@@ -370,11 +291,12 @@ def create_ui(theme_name="Ocean"):
         }
     }
 
-    // Initialize features after a short delay to ensure Gradio is ready
+        // Initialize features after Gradio is ready
     setTimeout(function() {
+
         // Keyboard shortcuts
         document.addEventListener('keydown', function(e) {
-            // Ctrl/Cmd + Enter to submit (when in textarea)
+            // Ctrl/Cmd + Enter to submit
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && e.target.matches('textarea')) {
                 const runButton = document.querySelector('button[id*="run"]');
                 if (runButton) runButton.click();
@@ -386,51 +308,12 @@ def create_ui(theme_name="Ocean"):
                 if (stopButton) stopButton.click();
             }
 
-            // Show shortcuts with ?
+            // ? to show help
             if (e.key === '?' && !e.target.matches('input, textarea')) {
-                showKeyboardShortcuts();
+                const helpButton = document.querySelector('button[id*="help"]');
+                if (helpButton) helpButton.click();
             }
         });
-
-        window.showKeyboardShortcuts = function() {
-            // Remove existing modal if any
-            const existing = document.querySelector('.shortcuts-modal');
-            if (existing) {
-                existing.remove();
-                return;
-            }
-
-            const modal = document.createElement('div');
-            modal.className = 'shortcuts-modal';
-            modal.innerHTML = `
-                <div class="shortcuts-content">
-                    <h3 style="margin-top: 0;">⌨️ Keyboard Shortcuts</h3>
-                    <div class="shortcut-list">
-                        <div class="shortcut-item">
-                            <div>
-                                <kbd>Ctrl</kbd> + <kbd>Enter</kbd>
-                            </div>
-                            <span>Submit task (when in text area)</span>
-                        </div>
-                        <div class="shortcut-item">
-                            <div><kbd>Esc</kbd></div>
-                            <span>Stop agent</span>
-                        </div>
-                        <div class="shortcut-item">
-                            <div><kbd>?</kbd></div>
-                            <span>Show this help</span>
-                        </div>
-                    </div>
-                    <button onclick="this.parentElement.parentElement.remove()" style="margin-top: 20px; padding: 8px 16px; cursor: pointer;">Close</button>
-                </div>
-            `;
-            modal.onclick = function(e) {
-                if (e.target === modal) {
-                    modal.remove();
-                }
-            };
-            document.body.appendChild(modal);
-        };
 
         // Notification system
         window.showNotification = function(type, title, message, duration) {
@@ -442,9 +325,6 @@ def create_ui(theme_name="Ocean"):
                 document.body.appendChild(container);
             }
 
-            const notification = document.createElement('div');
-            notification.className = 'notification notification-' + type;
-
             const icons = {
                 success: '✓',
                 info: 'ℹ',
@@ -452,21 +332,20 @@ def create_ui(theme_name="Ocean"):
                 error: '✕'
             };
 
+            const notification = document.createElement('div');
+            notification.className = 'notification notification-' + type;
             notification.innerHTML = `
-                <div class="notification-icon">${icons[type] || 'ℹ'}</div>
-                <div class="notification-content">
+                <div style="font-size: 24px;">${icons[type] || 'ℹ'}</div>
+                <div style="flex: 1;">
                     <strong>${title}</strong>
-                    <p>${message}</p>
+                    <p style="margin: 4px 0 0 0; font-size: 0.9em; opacity: 0.8;">${message}</p>
                 </div>
-                <button class="notification-close" onclick="this.parentElement.remove()">×</button>
+                <button onclick="this.parentElement.remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; opacity: 0.5;">×</button>
             `;
             container.appendChild(notification);
 
             setTimeout(function() {
-                notification.style.animation = 'slideOut 0.3s forwards';
-                setTimeout(function() {
-                    if (notification.parentNode) notification.remove();
-                }, 300);
+                if (notification.parentNode) notification.remove();
             }, duration);
         };
     }, 100);
@@ -478,92 +357,311 @@ def create_ui(theme_name="Ocean"):
         title="Browser Use WebUI",
         theme=theme_map[theme_name],
         css=css,
-        # Temporarily disabled to debug empty tabs issue
-        # js=js_func,
+        js=js_func,
     ) as demo:
-        # Enhanced Header with visual badges
-        with gr.Row():
-            gr.HTML("""
-            <div class="header-container">
-                <div class="header-main">
-                    <span class="header-icon">🌐</span>
-                    <h1 class="header-title">Browser Use WebUI</h1>
+        # Header with Help button
+        with gr.Row(elem_classes=["header-container"]):
+            gr.HTML("<div class='header-left'></div>")
+            gr.HTML(
+                """
+                <div class='header-center'>
+                    <h1 class='header-title'>🌐 Browser Use WebUI</h1>
+                    <p class='header-tagline'>AI-Powered Browser Automation Platform</p>
                 </div>
-                <p class="header-tagline">AI-Powered Browser Automation Platform</p>
-                <div class="header-features">
-                    <span class="feature-badge"><span class="badge-icon">🤖</span> Multi-LLM</span>
-                    <span class="feature-badge"><span class="badge-icon">🌐</span> Custom Browser</span>
-                    <span class="feature-badge"><span class="badge-icon">🔌</span> MCP Compatible</span>
-                    <span class="feature-badge"><span class="badge-icon">🔬</span> Deep Research</span>
-                </div>
-            </div>
-            """)
+                """
+            )
+            with gr.Column(elem_classes=["header-right"]):
+                help_button = gr.Button("❓ Help", size="sm", variant="secondary")
 
-        # Main navigation with improved organization
-        # Note: Settings tab created first so components are registered before Quick Start references them
-        with gr.Tabs(elem_classes=["main-tabs"], selected="🚀 Quick Start") as main_tabs:
-            # ⚙️ SETTINGS TAB (CONSOLIDATED) - Create first so components exist
-            with gr.TabItem("⚙️ Settings"):
-                gr.Markdown(
-                    """
-                    ### Configure Your AI Agent
-                    Set up LLM providers, browser options, and MCP servers. All settings are organized in collapsible sections below.
-                    """,
-                    elem_classes=["tab-header-text"],
-                )
+        # Main Dashboard Layout
+        with gr.Row(elem_classes=["dashboard-container"]):
+            # Left Sidebar
+            with gr.Column(elem_classes=["dashboard-sidebar"], scale=0):
+                create_dashboard_sidebar(ui_manager)
 
-                with gr.Tabs(elem_classes=["secondary-tabs"]):
-                    with gr.TabItem("🤖 Agent Settings"):
-                        create_agent_settings_tab(ui_manager)
+            # Main Content Area
+            with gr.Column(elem_classes=["dashboard-main"], scale=3):
+                create_dashboard_main(ui_manager)
 
-                    with gr.TabItem("🌐 Browser Settings"):
-                        create_browser_settings_tab(ui_manager)
+            # Settings Panel - Always visible
+            with gr.Column(
+                elem_classes=["dashboard-settings"],
+                scale=0,
+                visible=True,
+            ):
+                create_dashboard_settings(ui_manager)
 
-                    with gr.TabItem("🔌 MCP Settings"):
-                        create_mcp_settings_tab(ui_manager)
+        # Help Modal (overlay)
+        create_help_modal(ui_manager)
 
-            # 🚀 QUICK START TAB - Create after settings so we can reference components
-            with gr.TabItem("🚀 Quick Start"):
-                create_quick_start_tab(ui_manager)
+        # MCP Settings Modal (overlay)
+        with gr.Group(visible=False, elem_classes=["mcp-modal-overlay"]) as mcp_modal:
+            with gr.Column(elem_classes=["mcp-modal-content"]):
+                create_mcp_settings_tab(ui_manager)
+                close_mcp_button = gr.Button("Close", variant="primary", size="lg")
 
-            # 🤖 RUN AGENT TAB
-            with gr.TabItem("🤖 Run Agent"):
-                gr.Markdown(
-                    """
-                    ### Execute Browser Automation Tasks
-                    Enter your task below and let the AI agent control the browser for you.
-                    """,
-                    elem_classes=["tab-header-text"],
-                )
-                create_browser_use_agent_tab(ui_manager)
+        # Wire up Help Modal
+        def show_help():
+            """Show help modal."""
+            _ = ui_manager.get_component_by_id("help_modal.help_modal")
+            return gr.update(visible=True)
 
-            # 🎁 AGENT MARKETPLACE TAB
-            with gr.TabItem("🎁 Agent Marketplace"):
-                gr.Markdown(
-                    """
-                    ### Specialized Agents
-                    Pre-built agents optimized for specific tasks. Choose an agent that matches your use case.
-                    """,
-                    elem_classes=["tab-header-text"],
-                )
-                with gr.Tabs(elem_classes=["secondary-tabs"]):
-                    with gr.TabItem("🔬 Deep Research"):
-                        gr.Markdown("""
-                        **Deep Research Agent** performs comprehensive multi-source research with automatic verification and synthesis.
+        def hide_help():
+            """Hide help modal."""
+            return gr.update(visible=False)
 
-                        **Best for:** Academic research, market analysis, competitive intelligence
-                        """)
-                        create_deep_research_agent_tab(ui_manager)
+        help_button.click(
+            fn=show_help,
+            inputs=[],
+            outputs=[ui_manager.get_component_by_id("help_modal.help_modal")],
+        )
 
-            # 💾 CONFIG MANAGEMENT TAB
-            with gr.TabItem("💾 Config Management"):
-                gr.Markdown(
-                    """
-                    ### Save & Load Configurations
-                    Save your current settings or load previously saved configurations.
-                    """,
-                    elem_classes=["tab-header-text"],
-                )
-                create_load_save_config_tab(ui_manager)
+        # Wire up MCP Modal
+        def show_mcp_modal():
+            """Show MCP settings modal."""
+            return gr.update(visible=True)
+
+        def hide_mcp_modal():
+            """Hide MCP settings modal."""
+            return gr.update(visible=False)
+
+        edit_mcp_btn = ui_manager.get_component_by_id("dashboard_settings.edit_mcp_button")
+        edit_mcp_btn.click(  # type: ignore[attr-defined]
+            fn=show_mcp_modal,
+            inputs=[],
+            outputs=[mcp_modal],
+        )
+
+        close_mcp_button.click(
+            fn=hide_mcp_modal,
+            inputs=[],
+            outputs=[mcp_modal],
+        )
+
+        # Wire up Preset Buttons from Sidebar
+        # These will update settings in the Settings panel
+        research_btn = ui_manager.get_component_by_id("dashboard_sidebar.research_btn")
+        automation_btn = ui_manager.get_component_by_id("dashboard_sidebar.automation_btn")
+        custom_browser_btn = ui_manager.get_component_by_id("dashboard_sidebar.custom_browser_btn")
+
+        def load_research_preset():
+            """Load research preset configuration."""
+            return [
+                gr.update(value="anthropic"),  # llm_provider
+                gr.update(value="claude-3-5-sonnet-20241022"),  # llm_model_name
+                gr.update(value=0.7),  # llm_temperature
+                gr.update(value=True),  # use_vision
+                gr.update(value=150),  # max_steps
+                gr.update(value=10),  # max_actions
+                gr.update(value=False),  # headless
+                gr.update(value=True),  # keep_browser_open
+            ]
+
+        def load_automation_preset():
+            """Load automation preset configuration."""
+            return [
+                gr.update(value="openai"),
+                gr.update(value="gpt-4o"),
+                gr.update(value=0.6),
+                gr.update(value=True),
+                gr.update(value=100),
+                gr.update(value=10),
+                gr.update(value=False),
+                gr.update(value=True),
+            ]
+
+        def load_custom_browser_preset():
+            """Load custom browser preset configuration."""
+            return [
+                gr.update(value="openai"),
+                gr.update(value="gpt-4o-mini"),
+                gr.update(value=0.6),
+                gr.update(value=True),
+                gr.update(value=100),
+                gr.update(value=10),
+                gr.update(value=False),
+                gr.update(value=True),
+                gr.update(value=True),  # use_own_browser
+            ]
+
+        research_btn.click(  # type: ignore[attr-defined]
+            fn=load_research_preset,
+            inputs=[],
+            outputs=[
+                ui_manager.get_component_by_id("dashboard_settings.llm_provider"),
+                ui_manager.get_component_by_id("dashboard_settings.llm_model_name"),
+                ui_manager.get_component_by_id("dashboard_settings.llm_temperature"),
+                ui_manager.get_component_by_id("dashboard_settings.use_vision"),
+                ui_manager.get_component_by_id("dashboard_settings.max_steps"),
+                ui_manager.get_component_by_id("dashboard_settings.max_actions"),
+                ui_manager.get_component_by_id("dashboard_settings.headless"),
+                ui_manager.get_component_by_id("dashboard_settings.keep_browser_open"),
+            ],
+        )
+
+        automation_btn.click(  # type: ignore[attr-defined]
+            fn=load_automation_preset,
+            inputs=[],
+            outputs=[
+                ui_manager.get_component_by_id("dashboard_settings.llm_provider"),
+                ui_manager.get_component_by_id("dashboard_settings.llm_model_name"),
+                ui_manager.get_component_by_id("dashboard_settings.llm_temperature"),
+                ui_manager.get_component_by_id("dashboard_settings.use_vision"),
+                ui_manager.get_component_by_id("dashboard_settings.max_steps"),
+                ui_manager.get_component_by_id("dashboard_settings.max_actions"),
+                ui_manager.get_component_by_id("dashboard_settings.headless"),
+                ui_manager.get_component_by_id("dashboard_settings.keep_browser_open"),
+            ],
+        )
+
+        custom_browser_btn.click(  # type: ignore[attr-defined]
+            fn=load_custom_browser_preset,
+            inputs=[],
+            outputs=[
+                ui_manager.get_component_by_id("dashboard_settings.llm_provider"),
+                ui_manager.get_component_by_id("dashboard_settings.llm_model_name"),
+                ui_manager.get_component_by_id("dashboard_settings.llm_temperature"),
+                ui_manager.get_component_by_id("dashboard_settings.use_vision"),
+                ui_manager.get_component_by_id("dashboard_settings.max_steps"),
+                ui_manager.get_component_by_id("dashboard_settings.max_actions"),
+                ui_manager.get_component_by_id("dashboard_settings.headless"),
+                ui_manager.get_component_by_id("dashboard_settings.keep_browser_open"),
+                ui_manager.get_component_by_id("dashboard_settings.use_own_browser"),
+            ],
+        )
+
+        # Wire up Save/Load Config
+        save_config_btn = ui_manager.get_component_by_id("dashboard_settings.save_config_button")
+        load_config_btn = ui_manager.get_component_by_id("dashboard_settings.load_config_button")
+        config_file = ui_manager.get_component_by_id("dashboard_settings.config_file")
+        config_status = ui_manager.get_component_by_id("dashboard_settings.config_status")
+
+        save_config_btn.click(  # type: ignore[attr-defined]
+            fn=ui_manager.save_config,
+            inputs=list(ui_manager.get_components()),
+            outputs=[config_status],
+        )
+
+        load_config_btn.click(  # type: ignore[attr-defined]
+            fn=lambda: gr.update(visible=True),
+            inputs=[],
+            outputs=[config_file],
+        )
+
+        config_file.change(  # type: ignore[attr-defined]
+            fn=ui_manager.load_config,
+            inputs=[config_file],
+            outputs=ui_manager.get_components(),
+        )
+
+        # Initialize Browser Use Agent
+        ui_manager.init_browser_use_agent()
+
+        # Wire up Browser Use Agent handlers
+        run_button = ui_manager.get_component_by_id("browser_use_agent.run_button")
+        stop_button = ui_manager.get_component_by_id("browser_use_agent.stop_button")
+        pause_resume_button = ui_manager.get_component_by_id(
+            "browser_use_agent.pause_resume_button"
+        )
+        clear_button = ui_manager.get_component_by_id("browser_use_agent.clear_button")
+        submit_help_button = ui_manager.get_component_by_id("browser_use_agent.submit_help_button")
+        chatbot = ui_manager.get_component_by_id("browser_use_agent.chatbot")
+
+        # Wrapper functions to handle async generator functions
+        async def run_agent_wrapper(*args):
+            """Wrapper for run_agent_task that yields updates."""
+            components_dict = dict(zip(ui_manager.get_components(), args, strict=True))
+            async for update_dict in run_agent_task(ui_manager, components_dict):
+                yield list(update_dict.values())
+
+        async def stop_wrapper():
+            """Wrapper for handle_stop."""
+            await handle_stop(ui_manager)
+            return []
+
+        async def pause_resume_wrapper():
+            """Wrapper for handle_pause_resume."""
+            result = await handle_pause_resume(ui_manager)
+            return [result]
+
+        async def clear_wrapper():
+            """Wrapper for handle_clear."""
+            result = await handle_clear(ui_manager)
+            return [result]
+
+        async def submit_help_wrapper(*args):
+            """Wrapper for handle_submit."""
+            components_dict = dict(zip(ui_manager.get_components(), args, strict=True))
+            async for update_dict in handle_submit(ui_manager, components_dict):
+                yield list(update_dict.values())
+
+        run_button.click(  # type: ignore[attr-defined]
+            fn=run_agent_wrapper,
+            inputs=ui_manager.get_components(),
+            outputs=ui_manager.get_components(),
+        )
+
+        stop_button.click(  # type: ignore[attr-defined]
+            fn=stop_wrapper,
+            inputs=[],
+            outputs=[],
+        )
+
+        pause_resume_button.click(  # type: ignore[attr-defined]
+            fn=pause_resume_wrapper,
+            inputs=[],
+            outputs=[pause_resume_button],
+        )
+
+        clear_button.click(  # type: ignore[attr-defined]
+            fn=clear_wrapper,
+            inputs=[],
+            outputs=[chatbot],
+        )
+
+        submit_help_button.click(  # type: ignore[attr-defined]
+            fn=submit_help_wrapper,
+            inputs=ui_manager.get_components(),
+            outputs=ui_manager.get_components(),
+        )
+
+        # Initialize Deep Research Agent
+        ui_manager.init_deep_research_agent()
+
+        # Wire up Deep Research Agent handlers
+        start_button = ui_manager.get_component_by_id("deep_research_agent.start_button")
+        stop_button_dr = ui_manager.get_component_by_id("deep_research_agent.stop_button")
+        clear_button_dr = ui_manager.get_component_by_id("deep_research_agent.clear_button")
+        markdown_display = ui_manager.get_component_by_id("deep_research_agent.markdown_display")
+
+        # Wrapper functions for Deep Research Agent
+        async def run_research_wrapper(*args):
+            """Wrapper for run_deep_research that yields updates."""
+            components_dict = dict(zip(ui_manager.get_components(), args, strict=True))
+            async for update_dict in run_deep_research(ui_manager, components_dict):
+                yield list(update_dict.values())
+
+        async def stop_research_wrapper():
+            """Wrapper for stop_deep_research."""
+            result = await stop_deep_research(ui_manager)
+            return list(result.values()) if result else []
+
+        start_button.click(  # type: ignore[attr-defined]
+            fn=run_research_wrapper,
+            inputs=ui_manager.get_components(),
+            outputs=ui_manager.get_components(),
+        )
+
+        stop_button_dr.click(  # type: ignore[attr-defined]
+            fn=stop_research_wrapper,
+            inputs=[],
+            outputs=[],
+        )
+
+        clear_button_dr.click(  # type: ignore[attr-defined]
+            fn=lambda: gr.update(value="Ready to start new research..."),
+            inputs=[],
+            outputs=[markdown_display],
+        )
 
     return demo

@@ -97,7 +97,7 @@ class EventBus:
     def _init_redis(self):
         """Initialize Redis pub/sub."""
         try:
-            import redis.asyncio as redis
+            import redis.asyncio as redis  # type: ignore[import-untyped]
 
             self.redis = redis.Redis(
                 host=os.getenv("REDIS_HOST", "localhost"),

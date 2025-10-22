@@ -17,13 +17,14 @@ def update_model_dropdown(llm_provider):
     """
     # Use predefined models for the selected provider
     if llm_provider in config.model_names:
-        return gr.Dropdown(
-            choices=config.model_names[llm_provider],
-            value=config.model_names[llm_provider][0],
+        models = config.model_names[llm_provider]
+        return gr.update(
+            choices=models,
+            value=models[0] if models else "",
             interactive=True,
         )
     else:
-        return gr.Dropdown(choices=[], value="", interactive=True, allow_custom_value=True)
+        return gr.update(choices=[], value="", interactive=True)
 
 
 async def update_mcp_server(mcp_file: str, webui_manager: WebuiManager):

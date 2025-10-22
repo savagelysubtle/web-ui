@@ -141,7 +141,7 @@ def get_llm_model(provider: str, **kwargs):
             model=kwargs.get("model_name", "claude-3-5-sonnet-20241022"),
             temperature=kwargs.get("temperature", 0.0),
             anthropic_api_url=base_url,
-            anthropic_api_key=SecretStr(api_key) if api_key else None,
+            anthropic_api_key=SecretStr(api_key) if api_key else SecretStr(""),
         )
     elif provider == "mistral":
         if not kwargs.get("base_url", ""):
@@ -238,12 +238,13 @@ def get_llm_model(provider: str, **kwargs):
         api_version = kwargs.get("api_version", "") or os.getenv(
             "AZURE_OPENAI_API_VERSION", "2025-01-01-preview"
         )
+        # AzureChatOpenAI uses deployment_name instead of model
         return AzureChatOpenAI(
-            model_name=kwargs.get("model_name", "gpt-4o"),
+            deployment_name=kwargs.get("model_name", "gpt-4o"),
             temperature=kwargs.get("temperature", 0.0),
-            api_version=api_version,
+            openai_api_version=api_version,
             azure_endpoint=base_url,
-            api_key=SecretStr(api_key) if api_key else None,
+            openai_api_key=SecretStr(api_key) if api_key else SecretStr(""),
         )
     elif provider == "alibaba":
         if not kwargs.get("base_url", ""):

@@ -9,7 +9,6 @@ import os
 
 import gradio as gr
 
-from src.web_ui.utils import config
 from src.web_ui.utils.mcp_config import get_mcp_config_path, load_mcp_config
 from src.web_ui.webui.webui_manager import WebuiManager
 
@@ -76,11 +75,11 @@ def get_current_config_status() -> str:
         api_key_var = f"{default_llm.upper()}_API_KEY"
         api_key_set = bool(os.getenv(api_key_var))
 
-        llm_status = f"✅ Configured" if api_key_set else "⚠️ No API key"
+        llm_status = "✅ Configured" if api_key_set else "⚠️ No API key"
         llm_display = default_llm.title()
 
         # Check MCP configuration
-        mcp_config_path = get_mcp_config_path()
+        get_mcp_config_path()  # Check if config exists
         mcp_config = load_mcp_config()
         if mcp_config and "mcpServers" in mcp_config:
             mcp_count = len(mcp_config["mcpServers"])
@@ -90,9 +89,7 @@ def get_current_config_status() -> str:
 
         # Check browser configuration
         use_own_browser = os.getenv("USE_OWN_BROWSER", "false").lower() == "true"
-        browser_status = (
-            "Custom Chrome" if use_own_browser else "Default Playwright"
-        )
+        browser_status = "Custom Chrome" if use_own_browser else "Default Playwright"
 
         status_md = f"""
 **Current Configuration:**
@@ -152,7 +149,8 @@ def load_preset_config(preset_name: str, webui_manager: WebuiManager):
         if config_key in preset_config:
             try:
                 component = webui_manager.get_component_by_id(component_id)
-                updates.append((component, preset_config[config_key]))
+                if isinstance(preset_config, dict):
+                    updates.append((component, preset_config[config_key]))
             except KeyError:
                 logger.debug(f"Component not found: {component_id}")
                 continue
@@ -312,7 +310,7 @@ def create_quick_start_tab(webui_manager: WebuiManager):
     def load_research_preset():
         """Load research preset configuration."""
         updates = load_preset_config("research", webui_manager)
-        status_msg = f"""
+        status_msg = """
 ✅ **Research Mode Loaded!**
 
 Settings applied:
@@ -330,7 +328,7 @@ Go to the **Settings** tab to review or adjust these settings.
     def load_automation_preset():
         """Load automation preset configuration."""
         updates = load_preset_config("automation", webui_manager)
-        status_msg = f"""
+        status_msg = """
 ✅ **Automation Mode Loaded!**
 
 Settings applied:
@@ -348,7 +346,7 @@ Go to the **Settings** tab to review or adjust these settings.
     def load_custom_browser_preset():
         """Load custom browser preset configuration."""
         updates = load_preset_config("custom_browser", webui_manager)
-        status_msg = f"""
+        status_msg = """
 ✅ **Custom Browser Mode Loaded!**
 
 Settings applied:
@@ -423,4 +421,3 @@ Configure your Chrome path in the **Settings > Browser Settings** tab.
         inputs=[],
         outputs=[status_display],
     )
-

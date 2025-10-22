@@ -5,7 +5,12 @@
       "Bash(dir:*)",
       "Bash(uv sync:*)",
       "Bash(mkdir:*)",
-      "Bash(del \"d:\\Coding\\web-ui-1\\src\\web_ui\\agent\\deep_research\\mcp_tools_enhancement.txt\")"
+      "Bash(del \"d:\\Coding\\web-ui-1\\src\\web_ui\\agent\\deep_research\\mcp_tools_enhancement.txt\")",
+      "Bash(python webui.py:*)",
+      "Bash(python -m py_compile:*)",
+      "Bash(python test_dashboard.py:*)",
+      "Bash(python -c:*)",
+      "Bash(uv run python:*)"
     ],
     "deny": [],
     "ask": []
