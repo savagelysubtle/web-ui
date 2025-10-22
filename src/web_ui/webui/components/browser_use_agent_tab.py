@@ -570,10 +570,12 @@ async def run_agent_task(
         agent_run_coro = webui_manager.bu_agent.run(max_steps=max_steps)
         agent_task = asyncio.create_task(agent_run_coro)
         webui_manager.bu_current_task = agent_task  # Store the task
-        
+
         # Yield progress update
         yield {
-            progress_text_comp: gr.update(value=f"🤖 **Agent running** | Task: {task[:50]}{'...' if len(task) > 50 else ''}"),
+            progress_text_comp: gr.update(
+                value=f"🤖 **Agent running** | Task: {task[:50]}{'...' if len(task) > 50 else ''}"
+            ),
         }
 
         last_chat_len = len(webui_manager.bu_chat_history)
@@ -725,7 +727,9 @@ async def run_agent_task(
             final_update[chatbot_comp] = gr.update(value=webui_manager.bu_chat_history)
         except Exception as e:
             logger.error(f"Error during agent execution: {e}", exc_info=True)
-            error_message = format_error_message(e, context="Agent execution", include_traceback=True)
+            error_message = format_error_message(
+                e, context="Agent execution", include_traceback=True
+            )
             if not any(
                 "error-container" in (msg.get("content") or "")
                 for msg in webui_manager.bu_chat_history[-3:]  # Check last 3 messages
@@ -785,7 +789,14 @@ async def run_agent_task(
             clear_button_comp: gr.update(interactive=True),
             chatbot_comp: gr.update(
                 value=webui_manager.bu_chat_history
-                + [{"role": "assistant", "content": format_error_message(e, context="Agent setup", include_traceback=True)}]
+                + [
+                    {
+                        "role": "assistant",
+                        "content": format_error_message(
+                            e, context="Agent setup", include_traceback=True
+                        ),
+                    }
+                ]
             ),
         }
 
@@ -976,10 +987,10 @@ def create_browser_use_agent_tab(webui_manager: WebuiManager):
         # Add custom CSS and JavaScript for enhanced chat formatting
         gr.HTML(f"<style>{CHAT_FORMATTING_CSS}</style>")
         gr.HTML(CHAT_FORMATTING_JS)
-        
+
         # Progress indicator
         progress_text = gr.Markdown("Ready to start", elem_id="progress_text")
-        
+
         chatbot = gr.Chatbot(
             lambda: webui_manager.bu_chat_history,  # Load history dynamically
             elem_id="browser_use_chatbot",

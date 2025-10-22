@@ -189,20 +189,22 @@ def add_copy_button(content: str, label: str = "Copy") -> str:
     """
 
 
-def format_error_message(error: Exception | str, context: str = None, include_traceback: bool = False) -> str:
+def format_error_message(
+    error: Exception | str, context: str = None, include_traceback: bool = False
+) -> str:
     """
     Format error messages in a user-friendly way.
-    
+
     Args:
         error: The error (Exception object or string)
         context: Optional context about where/when the error occurred
         include_traceback: Whether to include full traceback (for debugging)
-        
+
     Returns:
         Formatted HTML error message
     """
     import traceback
-    
+
     # Extract error details
     if isinstance(error, Exception):
         error_type = type(error).__name__
@@ -212,7 +214,7 @@ def format_error_message(error: Exception | str, context: str = None, include_tr
         error_type = "Error"
         error_message = str(error)
         trace = None
-    
+
     # Create user-friendly error message
     error_icon = "🚫"
     error_html = f"""
@@ -222,20 +224,20 @@ def format_error_message(error: Exception | str, context: str = None, include_tr
             <span class="error-title">{error_type}</span>
         </div>
         """
-    
+
     if context:
         error_html += f"""
         <div class="error-context">
             <strong>Context:</strong> {context}
         </div>
         """
-    
+
     error_html += f"""
         <div class="error-message">
             {error_message}
         </div>
     """
-    
+
     # Add helpful suggestions based on error type
     suggestions = _get_error_suggestions(error_type, error_message)
     if suggestions:
@@ -250,89 +252,115 @@ def format_error_message(error: Exception | str, context: str = None, include_tr
             </ul>
         </div>
         """
-    
+
     # Add collapsible traceback if available
     if trace:
-        trace_html = create_collapsible_section("Technical Details (Traceback)", f"<pre>{trace}</pre>", collapsed=True)
+        trace_html = create_collapsible_section(
+            "Technical Details (Traceback)", f"<pre>{trace}</pre>", collapsed=True
+        )
         error_html += trace_html
-    
+
     error_html += """
     </div>
     """
-    
+
     return error_html
 
 
 def _get_error_suggestions(error_type: str, error_message: str) -> list[str]:
     """
     Get helpful suggestions based on error type and message.
-    
+
     Args:
         error_type: Type of error
         error_message: Error message text
-        
+
     Returns:
         List of suggestions
     """
     suggestions = []
     error_msg_lower = error_message.lower()
-    
+
     # API Key errors
-    if "api key" in error_msg_lower or "authentication" in error_msg_lower or "unauthorized" in error_msg_lower:
-        suggestions.extend([
-            "Check that your API key is correctly set in the .env file",
-            "Verify that the API key has not expired",
-            "Ensure the API key has the necessary permissions",
-        ])
-    
+    if (
+        "api key" in error_msg_lower
+        or "authentication" in error_msg_lower
+        or "unauthorized" in error_msg_lower
+    ):
+        suggestions.extend(
+            [
+                "Check that your API key is correctly set in the .env file",
+                "Verify that the API key has not expired",
+                "Ensure the API key has the necessary permissions",
+            ]
+        )
+
     # Connection errors
-    elif "connection" in error_msg_lower or "timeout" in error_msg_lower or "network" in error_msg_lower:
-        suggestions.extend([
-            "Check your internet connection",
-            "Verify that the API endpoint is accessible",
-            "Try increasing the timeout value in settings",
-        ])
-    
+    elif (
+        "connection" in error_msg_lower
+        or "timeout" in error_msg_lower
+        or "network" in error_msg_lower
+    ):
+        suggestions.extend(
+            [
+                "Check your internet connection",
+                "Verify that the API endpoint is accessible",
+                "Try increasing the timeout value in settings",
+            ]
+        )
+
     # Rate limit errors
     elif "rate limit" in error_msg_lower or "quota" in error_msg_lower:
-        suggestions.extend([
-            "Wait a few moments before trying again",
-            "Check your API usage quota",
-            "Consider upgrading your API plan if you're hitting limits frequently",
-        ])
-    
+        suggestions.extend(
+            [
+                "Wait a few moments before trying again",
+                "Check your API usage quota",
+                "Consider upgrading your API plan if you're hitting limits frequently",
+            ]
+        )
+
     # Browser/Playwright errors
     elif "browser" in error_msg_lower or "playwright" in error_msg_lower:
-        suggestions.extend([
-            "Ensure Playwright browsers are installed: `playwright install chromium --with-deps`",
-            "Try restarting the browser session using the Clear button",
-            "Check if the browser path is correct in settings",
-        ])
-    
+        suggestions.extend(
+            [
+                "Ensure Playwright browsers are installed: `playwright install chromium --with-deps`",
+                "Try restarting the browser session using the Clear button",
+                "Check if the browser path is correct in settings",
+            ]
+        )
+
     # Model/LLM errors
-    elif "model" in error_msg_lower and ("not found" in error_msg_lower or "does not exist" in error_msg_lower):
-        suggestions.extend([
-            "Verify that the model name is correct in Agent Settings",
-            "Check if the model is available for your API plan",
-            "Try using a different model from the same provider",
-        ])
-    
+    elif "model" in error_msg_lower and (
+        "not found" in error_msg_lower or "does not exist" in error_msg_lower
+    ):
+        suggestions.extend(
+            [
+                "Verify that the model name is correct in Agent Settings",
+                "Check if the model is available for your API plan",
+                "Try using a different model from the same provider",
+            ]
+        )
+
     # File/Path errors
     elif "filenotfound" in error_type.lower() or "no such file" in error_msg_lower:
-        suggestions.extend([
-            "Check that the file path exists and is accessible",
-            "Verify that you have read/write permissions for the directory",
-            "Use absolute paths if relative paths are causing issues",
-        ])
-    
+        suggestions.extend(
+            [
+                "Check that the file path exists and is accessible",
+                "Verify that you have read/write permissions for the directory",
+                "Use absolute paths if relative paths are causing issues",
+            ]
+        )
+
     # Generic fallback
     if not suggestions:
-        suggestions.extend([
-            "Check the Agent Settings tab for configuration issues",
-            "Review the technical details below for more information",
-            "Try restarting the agent with the Clear button",
-        ])
-    
+        suggestions.extend(
+            [
+                "Check the Agent Settings tab for configuration issues",
+                "Review the technical details below for more information",
+                "Try restarting the agent with the Clear button",
+            ]
+        )
+
     return suggestions
 
 
