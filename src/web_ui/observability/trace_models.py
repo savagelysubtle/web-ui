@@ -165,4 +165,3 @@ class ExecutionTrace:
     def get_failed_spans(self) -> list[TraceSpan]:
         """Get all failed spans."""
         return [span for span in self.spans if span.status == "error"]
-

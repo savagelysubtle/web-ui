@@ -79,9 +79,7 @@ def calculate_llm_cost(model: str, input_tokens: int, output_tokens: int) -> flo
 
     total_cost = input_cost + output_cost
 
-    logger.debug(
-        f"Cost for {model}: {input_tokens} in + {output_tokens} out = ${total_cost:.6f}"
-    )
+    logger.debug(f"Cost for {model}: {input_tokens} in + {output_tokens} out = ${total_cost:.6f}")
 
     return total_cost
 
@@ -157,4 +155,3 @@ def format_cost(cost_usd: float) -> str:
         return f"${cost_usd:.4f}"
     else:
         return f"${cost_usd:.2f}"
-

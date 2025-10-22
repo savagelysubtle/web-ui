@@ -164,9 +164,7 @@ class EventBus:
         try:
             await handler(event)
         except Exception as e:
-            logger.error(
-                f"Error in event handler for {event.event_type.value}: {e}", exc_info=True
-            )
+            logger.error(f"Error in event handler for {event.event_type.value}: {e}", exc_info=True)
 
     async def start_processing(self):
         """Start background event processing."""
@@ -232,4 +230,3 @@ def create_event(
         data=data,
         correlation_id=correlation_id,
     )
-

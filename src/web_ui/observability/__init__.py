@@ -24,4 +24,3 @@ __all__ = [
     "get_pricing_info",
     "format_cost",
 ]
-

@@ -19,4 +19,3 @@ __all__ = [
     "get_event_bus",
     "create_event",
 ]
-

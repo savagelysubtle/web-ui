@@ -150,4 +150,3 @@ class PluginDependencyError(PluginError):
     """Raised when plugin dependencies are not met."""
 
     pass
-
