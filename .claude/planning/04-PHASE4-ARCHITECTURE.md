@@ -226,7 +226,7 @@ import json
 import asyncio
 from datetime import datetime
 
-from src.events.event_bus import get_event_bus, Event, EventType
+from src.web_ui.events.event_bus import get_event_bus, Event, EventType
 
 app = FastAPI(title="Browser Use Web UI API")
 
