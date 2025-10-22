@@ -26,12 +26,12 @@ from src.web_ui.browser.custom_browser import CustomBrowser
 from src.web_ui.controller.custom_controller import CustomController
 from src.web_ui.utils import llm_provider
 from src.web_ui.utils.mcp_config import get_mcp_config_path, load_mcp_config
-from src.web_ui.webui.webui_manager import WebuiManager
 from src.web_ui.webui.components.chat_formatter import (
-    format_agent_message,
     CHAT_FORMATTING_CSS,
     CHAT_FORMATTING_JS,
+    format_agent_message,
 )
+from src.web_ui.webui.webui_manager import WebuiManager
 
 logger = logging.getLogger(__name__)
 
@@ -187,15 +187,19 @@ async def _handle_new_step(
 
     # --- Format Agent Output with Enhanced Styling ---
     formatted_output = _format_agent_output(output)  # Use the updated function
-    
+
     # Extract action information for badge if available
     metadata = {}
-    if output and hasattr(output, 'current_state') and output.current_state:
-        action_model = output.current_state.action_model if hasattr(output.current_state, 'action_model') else None
-        if action_model and hasattr(action_model, 'action'):
-            metadata['action'] = action_model.action
-            metadata['status'] = 'completed'
-    
+    if output and hasattr(output, "current_state") and output.current_state:
+        action_model = (
+            output.current_state.action_model
+            if hasattr(output.current_state, "action_model")
+            else None
+        )
+        if action_model and hasattr(action_model, "action"):
+            metadata["action"] = action_model.action
+            metadata["status"] = "completed"
+
     # Apply rich formatting to the output
     formatted_output = format_agent_message(formatted_output, metadata)
 
@@ -290,6 +294,7 @@ async def run_agent_task(
 
     # --- Get Components ---
     # Need handles to specific UI components to update them
+    progress_text_comp = webui_manager.get_component_by_id("browser_use_agent.progress_text")
     user_input_comp = webui_manager.get_component_by_id("browser_use_agent.user_input")
     run_button_comp = webui_manager.get_component_by_id("browser_use_agent.run_button")
     stop_button_comp = webui_manager.get_component_by_id("browser_use_agent.stop_button")
@@ -313,6 +318,7 @@ async def run_agent_task(
     webui_manager.bu_chat_history.append({"role": "user", "content": task})
 
     yield {
+        progress_text_comp: gr.update(value="🔄 **Initializing agent...**"),
         user_input_comp: gr.Textbox(value="", interactive=False, placeholder="Agent is running..."),
         run_button_comp: gr.Button(value="⏳ Running...", interactive=False),
         stop_button_comp: gr.Button(interactive=True),
@@ -563,8 +569,14 @@ async def run_agent_task(
         agent_run_coro = webui_manager.bu_agent.run(max_steps=max_steps)
         agent_task = asyncio.create_task(agent_run_coro)
         webui_manager.bu_current_task = agent_task  # Store the task
+        
+        # Yield progress update
+        yield {
+            progress_text_comp: gr.update(value=f"🤖 **Agent running** | Task: {task[:50]}{'...' if len(task) > 50 else ''}"),
+        }
 
         last_chat_len = len(webui_manager.bu_chat_history)
+        step_count = 0
         while not agent_task.done():
             is_paused = webui_manager.bu_agent.state.paused
             is_stopped = webui_manager.bu_agent.state.stopped
@@ -572,6 +584,7 @@ async def run_agent_task(
             # Check for pause state
             if is_paused:
                 yield {
+                    progress_text_comp: gr.update(value="⏸️ **Paused** | Waiting for resume..."),
                     pause_resume_button_comp: gr.update(value="▶️ Resume", interactive=True),
                     stop_button_comp: gr.update(interactive=True),
                 }
@@ -644,6 +657,9 @@ async def run_agent_task(
 
             # Update Chatbot if new messages arrived via callbacks
             if len(webui_manager.bu_chat_history) > last_chat_len:
+                step_count += 1
+                progress_msg = f"🤖 **Agent running** | Step {step_count}/{max_steps} | {len(webui_manager.bu_chat_history)} messages"
+                update_dict[progress_text_comp] = gr.update(value=progress_msg)
                 update_dict[chatbot_comp] = gr.update(value=webui_manager.bu_chat_history)
                 last_chat_len = len(webui_manager.bu_chat_history)
 
@@ -737,6 +753,7 @@ async def run_agent_task(
             # --- 8. Final UI Update ---
             final_update.update(
                 {
+                    progress_text_comp: gr.update(value="✅ **Task completed successfully!**"),
                     user_input_comp: gr.update(
                         value="",
                         interactive=True,
@@ -757,6 +774,7 @@ async def run_agent_task(
         logger.error(f"Error setting up agent task: {e}", exc_info=True)
         webui_manager.bu_current_task = None  # Ensure state is reset
         yield {
+            progress_text_comp: gr.update(value=f"❌ **Error:** {str(e)[:100]}"),
             user_input_comp: gr.update(
                 interactive=True, placeholder="Error during setup. Enter task..."
             ),
@@ -958,6 +976,9 @@ def create_browser_use_agent_tab(webui_manager: WebuiManager):
         gr.HTML(f"<style>{CHAT_FORMATTING_CSS}</style>")
         gr.HTML(CHAT_FORMATTING_JS)
         
+        # Progress indicator
+        progress_text = gr.Markdown("Ready to start", elem_id="progress_text")
+        
         chatbot = gr.Chatbot(
             lambda: webui_manager.bu_chat_history,  # Load history dynamically
             elem_id="browser_use_chatbot",
@@ -1000,6 +1021,7 @@ def create_browser_use_agent_tab(webui_manager: WebuiManager):
     # --- Store Components in Manager ---
     tab_components.update(
         {
+            "progress_text": progress_text,
             "chatbot": chatbot,
             "user_input": user_input,
             "clear_button": clear_button,
