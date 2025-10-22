@@ -177,12 +177,19 @@ class CustomController(Controller):
         Register the MCP tools used by this controller.
         Uses the new langchain-mcp-adapters 0.1.0+ API.
         """
-        if self.mcp_client:
+        if self.mcp_client and self.mcp_server_config:
             try:
-                # New API: use client.get_tools() which returns dict[server_name, list[Tool]]
-                tools_by_server = await self.mcp_client.get_tools()
+                # Get all server names from the config
+                if "mcpServers" in self.mcp_server_config:
+                    server_names = list(self.mcp_server_config["mcpServers"].keys())
+                else:
+                    server_names = list(self.mcp_server_config.keys())
 
-                for server_name, tools in tools_by_server.items():
+                total_tools = 0
+                for server_name in server_names:
+                    # Get tools for each server individually
+                    tools = await self.mcp_client.get_tools(server_name=server_name)
+
                     for tool in tools:
                         tool_name = f"mcp.{server_name}.{tool.name}"
                         param_model_class = create_tool_param_model(tool)
@@ -194,9 +201,10 @@ class CustomController(Controller):
                         )
                         logger.info(f"Add mcp tool: {tool_name}")
                     logger.debug(f"Registered {len(tools)} mcp tools for {server_name}")
+                    total_tools += len(tools)
 
                 logger.info(
-                    f"Successfully registered {sum(len(t) for t in tools_by_server.values())} MCP tools from {len(tools_by_server)} servers"
+                    f"Successfully registered {total_tools} MCP tools from {len(server_names)} servers"
                 )
             except Exception as e:
                 logger.error(f"Failed to register MCP tools: {e}", exc_info=True)
