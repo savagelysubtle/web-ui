@@ -196,3 +196,5 @@ data/
 mcp.json
 
 workflow
+
+.claude/
