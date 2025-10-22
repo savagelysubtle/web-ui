@@ -27,6 +27,11 @@ from src.web_ui.controller.custom_controller import CustomController
 from src.web_ui.utils import llm_provider
 from src.web_ui.utils.mcp_config import get_mcp_config_path, load_mcp_config
 from src.web_ui.webui.webui_manager import WebuiManager
+from src.web_ui.webui.components.chat_formatter import (
+    format_agent_message,
+    CHAT_FORMATTING_CSS,
+    CHAT_FORMATTING_JS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +141,7 @@ def _format_agent_output(model_output: AgentOutput) -> str:
 async def _handle_new_step(
     webui_manager: WebuiManager, state: BrowserStateHistory, output: AgentOutput, step_num: int
 ):
-    """Callback for each step taken by the agent, including screenshot display."""
+    """Callback for each step taken by the agent, including screenshot display and formatted messages."""
 
     # Use the correct chat history attribute name from the user's code
     if not hasattr(webui_manager, "bu_chat_history"):
@@ -180,12 +185,23 @@ async def _handle_new_step(
     else:
         logger.debug(f"No screenshot available for step {step_num}.")
 
-    # --- Format Agent Output ---
+    # --- Format Agent Output with Enhanced Styling ---
     formatted_output = _format_agent_output(output)  # Use the updated function
+    
+    # Extract action information for badge if available
+    metadata = {}
+    if output and hasattr(output, 'current_state') and output.current_state:
+        action_model = output.current_state.action_model if hasattr(output.current_state, 'action_model') else None
+        if action_model and hasattr(action_model, 'action'):
+            metadata['action'] = action_model.action
+            metadata['status'] = 'completed'
+    
+    # Apply rich formatting to the output
+    formatted_output = format_agent_message(formatted_output, metadata)
 
     # --- Combine and Append to Chat ---
     step_header = f"--- **Step {step_num}** ---"
-    # Combine header, image (with line break), and JSON block
+    # Combine header, image (with line break), and formatted output
     final_content = step_header + "<br/>" + screenshot_html + formatted_output
 
     chat_message = {
@@ -938,6 +954,10 @@ def create_browser_use_agent_tab(webui_manager: WebuiManager):
     # --- Define UI Components ---
     tab_components = {}
     with gr.Column():
+        # Add custom CSS and JavaScript for enhanced chat formatting
+        gr.HTML(f"<style>{CHAT_FORMATTING_CSS}</style>")
+        gr.HTML(CHAT_FORMATTING_JS)
+        
         chatbot = gr.Chatbot(
             lambda: webui_manager.bu_chat_history,  # Load history dynamically
             elem_id="browser_use_chatbot",
