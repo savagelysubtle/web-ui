@@ -17,13 +17,13 @@ async def setup_mcp_client_and_tools(
     mcp_server_config: dict[str, Any],
 ) -> MultiServerMCPClient | None:
     """
-    Initializes the MultiServerMCPClient, connects to servers, fetches tools,
-    filters them, and returns a flat list of usable tools and the client instance.
+    Initializes the MultiServerMCPClient and returns it.
+
+    As of langchain-mcp-adapters 0.1.0, the client is no longer used as a context manager.
+    Instead, use client.get_tools() directly.
 
     Returns:
-        A tuple containing:
-        - list[BaseTool]: The filtered list of usable LangChain tools.
-        - MultiServerMCPClient | None: The initialized and started client instance, or None on failure.
+        MultiServerMCPClient | None: The initialized client instance, or None on failure.
     """
 
     logger.info("Initializing MultiServerMCPClient...")
@@ -35,12 +35,14 @@ async def setup_mcp_client_and_tools(
     try:
         if "mcpServers" in mcp_server_config:
             mcp_server_config = mcp_server_config["mcpServers"]
+
+        # As of langchain-mcp-adapters 0.1.0, no longer use as context manager
         client = MultiServerMCPClient(mcp_server_config)
-        await client.__aenter__()
+        logger.info("MCP client initialized successfully (using new API)")
         return client
 
     except Exception as e:
-        logger.error(f"Failed to setup MCP client or fetch tools: {e}", exc_info=True)
+        logger.error(f"Failed to setup MCP client: {e}", exc_info=True)
         return None
 
 

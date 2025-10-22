@@ -47,21 +47,30 @@ async def update_mcp_server(mcp_file: str, webui_manager: WebuiManager):
 
 def create_agent_settings_tab(webui_manager: WebuiManager):
     """
-    Creates an agent settings tab.
+    Creates an agent settings tab with improved organization using accordions.
     """
     tab_components = {}
 
-    with gr.Group():
+    # System Prompts Section
+    with gr.Accordion("📝 System Prompts", open=False):
+        gr.Markdown("Customize agent behavior with custom system prompts.")
         with gr.Column():
             override_system_prompt = gr.Textbox(
-                label="Override system prompt", lines=4, interactive=True
+                label="Override System Prompt",
+                lines=4,
+                interactive=True,
+                placeholder="Replace the entire system prompt with your own...",
             )
             extend_system_prompt = gr.Textbox(
-                label="Extend system prompt", lines=4, interactive=True
+                label="Extend System Prompt",
+                lines=4,
+                interactive=True,
+                placeholder="Add additional instructions to the default prompt...",
             )
 
-    with gr.Group():
-        gr.Markdown("### MCP Configuration")
+    # MCP Configuration Section
+    with gr.Accordion("🔌 MCP Configuration", open=False):
+        gr.Markdown("Model Context Protocol server configuration.")
 
         # Check if mcp.json exists and show status
         mcp_config_path = get_mcp_config_path()
@@ -97,38 +106,42 @@ You can:
             label="MCP server configuration", lines=6, interactive=True, visible=False
         )
 
-    with gr.Group():
+    # Primary LLM Configuration
+    with gr.Accordion("🤖 Primary LLM Configuration", open=True):
+        gr.Markdown("**Main language model** used for agent reasoning and actions.")
+
         with gr.Row():
             llm_provider = gr.Dropdown(
                 choices=[provider for provider, model in config.model_names.items()],
                 label="LLM Provider",
                 value=os.getenv("DEFAULT_LLM", "openai"),
-                info="Select LLM provider for LLM",
+                info="Select LLM provider",
                 interactive=True,
             )
             llm_model_name = gr.Dropdown(
-                label="LLM Model Name",
+                label="Model Name",
                 choices=config.model_names[os.getenv("DEFAULT_LLM", "openai")],
                 value=config.model_names[os.getenv("DEFAULT_LLM", "openai")][0],
                 interactive=True,
                 allow_custom_value=True,
-                info="Select a model in the dropdown options or directly type a custom model name",
+                info="Select or type custom model name",
             )
+
         with gr.Row():
             llm_temperature = gr.Slider(
                 minimum=0.0,
                 maximum=2.0,
                 value=0.6,
                 step=0.1,
-                label="LLM Temperature",
-                info="Controls randomness in model outputs",
+                label="Temperature",
+                info="Controls randomness (0=deterministic, 2=creative)",
                 interactive=True,
             )
 
             use_vision = gr.Checkbox(
-                label="Use Vision",
+                label="Enable Vision",
                 value=True,
-                info="Enable Vision(Input highlighted screenshot into LLM)",
+                info="Input screenshots to LLM for better context",
                 interactive=True,
             )
 
@@ -138,52 +151,66 @@ You can:
                 value=16000,
                 step=1,
                 label="Ollama Context Length",
-                info="Controls max context length model needs to handle (less = faster)",
+                info="Max context length (less = faster)",
                 visible=False,
                 interactive=True,
             )
 
-        with gr.Row():
-            llm_base_url = gr.Textbox(
-                label="Base URL", value="", info="API endpoint URL (if required)"
-            )
-            llm_api_key = gr.Textbox(
-                label="API Key",
-                type="password",
-                value="",
-                info="Your API key (leave blank to use .env)",
-            )
+        with gr.Accordion("🔑 API Credentials (Optional)", open=False):
+            gr.Markdown("Override environment variables with custom credentials.")
+            with gr.Row():
+                llm_base_url = gr.Textbox(
+                    label="Base URL",
+                    value="",
+                    info="Custom API endpoint (leave blank for default)",
+                    placeholder="https://api.example.com/v1",
+                )
+                llm_api_key = gr.Textbox(
+                    label="API Key",
+                    type="password",
+                    value="",
+                    info="Leave blank to use .env file",
+                    placeholder="sk-...",
+                )
 
-    with gr.Group():
+    # Planner LLM Configuration (Optional)
+    with gr.Accordion("🧠 Planner LLM Configuration (Optional)", open=False):
+        gr.Markdown("""
+        **Separate planning model** for complex multi-step reasoning.
+
+        💡 Leave empty to use the same model for both planning and execution.
+        """)
+
         with gr.Row():
             planner_llm_provider = gr.Dropdown(
                 choices=[provider for provider, model in config.model_names.items()],
-                label="Planner LLM Provider",
-                info="Select LLM provider for LLM",
+                label="Planner Provider",
+                info="Optional separate provider for planning",
                 value=None,
                 interactive=True,
             )
             planner_llm_model_name = gr.Dropdown(
-                label="Planner LLM Model Name",
+                label="Planner Model",
                 interactive=True,
                 allow_custom_value=True,
-                info="Select a model in the dropdown options or directly type a custom model name",
+                info="Select or type custom model name",
             )
+
         with gr.Row():
             planner_llm_temperature = gr.Slider(
                 minimum=0.0,
                 maximum=2.0,
                 value=0.6,
                 step=0.1,
-                label="Planner LLM Temperature",
-                info="Controls randomness in model outputs",
+                label="Temperature",
+                info="Planning temperature (lower = more focused)",
                 interactive=True,
             )
 
             planner_use_vision = gr.Checkbox(
-                label="Use Vision(Planner LLM)",
+                label="Enable Vision",
                 value=False,
-                info="Enable Vision(Input highlighted screenshot into LLM)",
+                info="Enable vision for planner",
                 interactive=True,
             )
 
@@ -192,55 +219,69 @@ You can:
                 maximum=2**16,
                 value=16000,
                 step=1,
-                label="Ollama Context Length",
-                info="Controls max context length model needs to handle (less = faster)",
+                label="Ollama Context",
+                info="Max context for Ollama",
                 visible=False,
                 interactive=True,
             )
 
+        with gr.Accordion("🔑 Planner API Credentials (Optional)", open=False):
+            with gr.Row():
+                planner_llm_base_url = gr.Textbox(
+                    label="Base URL",
+                    value="",
+                    info="Custom API endpoint",
+                    placeholder="https://api.example.com/v1",
+                )
+                planner_llm_api_key = gr.Textbox(
+                    label="API Key",
+                    type="password",
+                    value="",
+                    info="Leave blank to use .env",
+                    placeholder="sk-...",
+                )
+
+    # Advanced Agent Parameters
+    with gr.Accordion("⚡ Advanced Parameters", open=False):
+        gr.Markdown("**Fine-tune agent behavior** and performance limits.")
+
         with gr.Row():
-            planner_llm_base_url = gr.Textbox(
-                label="Base URL", value="", info="API endpoint URL (if required)"
+            max_steps = gr.Slider(
+                minimum=1,
+                maximum=1000,
+                value=100,
+                step=1,
+                label="Max Steps",
+                info="Maximum reasoning steps before stopping",
+                interactive=True,
             )
-            planner_llm_api_key = gr.Textbox(
-                label="API Key",
-                type="password",
-                value="",
-                info="Your API key (leave blank to use .env)",
+            max_actions = gr.Slider(
+                minimum=1,
+                maximum=100,
+                value=10,
+                step=1,
+                label="Max Actions per Step",
+                info="Actions per reasoning step",
+                interactive=True,
             )
 
-    with gr.Row():
-        max_steps = gr.Slider(
-            minimum=1,
-            maximum=1000,
-            value=100,
-            step=1,
-            label="Max Run Steps",
-            info="Maximum number of steps the agent will take",
-            interactive=True,
-        )
-        max_actions = gr.Slider(
-            minimum=1,
-            maximum=100,
-            value=10,
-            step=1,
-            label="Max Number of Actions",
-            info="Maximum number of actions the agent will take per step",
-            interactive=True,
-        )
-
-    with gr.Row():
-        max_input_tokens = gr.Number(
-            label="Max Input Tokens", value=128000, precision=0, interactive=True
-        )
-        tool_calling_method = gr.Dropdown(
-            label="Tool Calling Method",
-            value="auto",
-            interactive=True,
-            allow_custom_value=True,
-            choices=["function_calling", "json_mode", "raw", "auto", "tools", "None"],
-            visible=True,
-        )
+        with gr.Row():
+            max_input_tokens = gr.Number(
+                label="Max Input Tokens",
+                value=128000,
+                precision=0,
+                interactive=True,
+                info="Context window limit",
+            )
+            tool_calling_method = gr.Dropdown(
+                label="Tool Calling Method",
+                value="auto",
+                interactive=True,
+                allow_custom_value=True,
+                choices=["function_calling", "json_mode", "raw", "auto", "tools", "None"],
+                info="Auto-detect recommended",
+                visible=True,
+            )
     tab_components.update(
         {
             "override_system_prompt": override_system_prompt,

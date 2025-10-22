@@ -167,30 +167,39 @@ class CustomController(Controller):
         if self.mcp_server_config:
             self.mcp_client = await setup_mcp_client_and_tools(self.mcp_server_config)
             if self.mcp_client:
-                self.register_mcp_tools()
+                await self.register_mcp_tools()
                 logger.info("MCP client setup completed successfully")
             else:
                 logger.warning("MCP client setup failed")
 
-    def register_mcp_tools(self):
+    async def register_mcp_tools(self):
         """
         Register the MCP tools used by this controller.
+        Uses the new langchain-mcp-adapters 0.1.0+ API.
         """
         if self.mcp_client:
-            for server_name in self.mcp_client.server_name_to_tools:
-                for tool in self.mcp_client.server_name_to_tools[server_name]:
-                    tool_name = f"mcp.{server_name}.{tool.name}"
-                    param_model_class = create_tool_param_model(tool)
-                    self.registry.registry.actions[tool_name] = RegisteredAction(
-                        name=tool_name,
-                        description=tool.description,
-                        function=tool,
-                        param_model=param_model_class,
-                    )
-                    logger.info(f"Add mcp tool: {tool_name}")
-                logger.debug(
-                    f"Registered {len(self.mcp_client.server_name_to_tools[server_name])} mcp tools for {server_name}"
+            try:
+                # New API: use client.get_tools() which returns dict[server_name, list[Tool]]
+                tools_by_server = await self.mcp_client.get_tools()
+
+                for server_name, tools in tools_by_server.items():
+                    for tool in tools:
+                        tool_name = f"mcp.{server_name}.{tool.name}"
+                        param_model_class = create_tool_param_model(tool)
+                        self.registry.registry.actions[tool_name] = RegisteredAction(
+                            name=tool_name,
+                            description=tool.description,
+                            function=tool,
+                            param_model=param_model_class,
+                        )
+                        logger.info(f"Add mcp tool: {tool_name}")
+                    logger.debug(f"Registered {len(tools)} mcp tools for {server_name}")
+
+                logger.info(
+                    f"Successfully registered {sum(len(t) for t in tools_by_server.values())} MCP tools from {len(tools_by_server)} servers"
                 )
+            except Exception as e:
+                logger.error(f"Failed to register MCP tools: {e}", exc_info=True)
         else:
             logger.warning("MCP client not started.")
 

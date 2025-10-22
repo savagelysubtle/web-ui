@@ -199,6 +199,7 @@ cp .env.example .env
 #### Quick Start
 
 1. **Create MCP Configuration:**
+
    ```bash
    # Option 1: Use the Web UI
    # Go to the "MCP Settings" tab and click "Load Example Config"
@@ -209,23 +210,28 @@ cp .env.example .env
 
 2. **Edit Configuration:**
    Edit `mcp.json` to enable the MCP servers you need:
+
    ```json
    {
      "mcpServers": {
        "filesystem": {
          "command": "npx",
-         "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/directory"]
+         "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/directory"],
+         "transport": "stdio"
        },
        "brave-search": {
          "command": "npx",
          "args": ["-y", "@modelcontextprotocol/server-brave-search"],
          "env": {
            "BRAVE_API_KEY": "your_api_key_here"
-         }
+         },
+         "transport": "stdio"
        }
      }
    }
    ```
+
+   **Note:** As of `langchain-mcp-adapters 0.1.0+`, each server configuration **must include** a `"transport": "stdio"` key.
 
 3. **Use the MCP Settings Tab:**
    - Navigate to the **🔌 MCP Settings** tab in the Web UI
@@ -276,15 +282,20 @@ See `mcp.example.json` for complete configuration examples.
       ],
       "env": {                    // Optional environment variables
         "API_KEY": "value"
-      }
+      },
+      "transport": "stdio"        // Required: transport type (stdio, sse, websocket, streamable_http)
     }
   }
 }
 ```
 
+**⚠️ Breaking Change (langchain-mcp-adapters 0.1.0+):**
+All MCP server configurations **must** include `"transport": "stdio"`. Most MCP servers use stdio transport for process-based communication.
+
 #### Web UI Features
 
 The **MCP Settings** tab provides:
+
 - **Live Editor:** Edit `mcp.json` with syntax highlighting
 - **Validation:** Real-time validation of configuration structure
 - **Server Summary:** View configured servers and their details
@@ -294,16 +305,19 @@ The **MCP Settings** tab provides:
 #### Configuration Management
 
 **Via Web UI:**
+
 1. Go to the **MCP Settings** tab
 2. Edit the JSON configuration
 3. Click "Save Configuration"
 4. Restart agents (use "Clear" button) to apply changes
 
 **Via File System:**
+
 1. Edit `mcp.json` directly in your editor
 2. Restart the Web UI or use "Clear" + new agent task
 
 **Via Environment:**
+
 ```bash
 # Use custom config location
 export MCP_CONFIG_PATH=/path/to/custom/mcp.json
@@ -313,6 +327,7 @@ python webui.py
 #### Agent Settings Tab Integration
 
 The **Agent Settings** tab shows:
+
 - ✅ **Active Configuration:** Displays current `mcp.json` status
 - 📊 **Server Summary:** Lists configured MCP servers
 - 📁 **File Upload:** Temporary override via JSON file upload (if no `mcp.json` exists)
@@ -327,17 +342,20 @@ The **Agent Settings** tab shows:
 #### Troubleshooting
 
 **MCP tools not appearing:**
+
 1. Verify `mcp.json` exists and is valid (use MCP Settings tab validator)
 2. Check browser console/terminal for MCP client errors
 3. Ensure required environment variables (API keys) are set
 4. Use "Clear" button to restart the agent with new configuration
 
 **Configuration not loading:**
+
 1. Check file path: `./mcp.json` or `$MCP_CONFIG_PATH`
 2. Validate JSON syntax (no trailing commas, proper quotes)
 3. Review logs for "Loaded MCP configuration from..." message
 
 **Server-specific issues:**
+
 - **Filesystem:** Ensure the specified path exists and is accessible
 - **API-based servers:** Verify API keys are correct and have proper permissions
 - **npm packages:** Run `npx -y @package/name` manually to test installation

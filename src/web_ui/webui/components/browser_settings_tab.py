@@ -46,96 +46,133 @@ async def close_browser(webui_manager: WebuiManager):
 
 def create_browser_settings_tab(webui_manager: WebuiManager):
     """
-    Creates a browser settings tab.
+    Creates a browser settings tab with improved organization.
     """
     tab_components = {}
 
-    with gr.Group():
-        with gr.Row():
-            browser_binary_path = gr.Textbox(
-                label="Browser Binary Path",
-                lines=1,
-                interactive=True,
-                placeholder="e.g. '/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome'",
-            )
-            browser_user_data_dir = gr.Textbox(
-                label="Browser User Data Dir",
-                lines=1,
-                interactive=True,
-                placeholder="Leave it empty if you use your default user data",
-            )
-    with gr.Group():
+    # Custom Browser Configuration
+    with gr.Accordion("🌐 Custom Browser Configuration", open=False):
+        gr.Markdown("""
+        **Use your own Chrome/browser** instead of Playwright's default browser.
+
+        ⚠️ Close all Chrome windows before enabling "Use Own Browser" mode.
+        """)
+
         with gr.Row():
             use_own_browser = gr.Checkbox(
                 label="Use Own Browser",
                 value=bool(strtobool(os.getenv("USE_OWN_BROWSER", "false"))),
-                info="Use your existing browser instance",
+                info="Connect to your existing browser instance",
                 interactive=True,
             )
             keep_browser_open = gr.Checkbox(
                 label="Keep Browser Open",
                 value=bool(strtobool(os.getenv("KEEP_BROWSER_OPEN", "true"))),
-                info="Keep Browser Open between Tasks",
+                info="Persist browser between tasks",
                 interactive=True,
             )
+
+        with gr.Row():
+            browser_binary_path = gr.Textbox(
+                label="Browser Binary Path",
+                lines=1,
+                interactive=True,
+                placeholder="e.g. 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'",
+                info="Path to Chrome/Chromium executable",
+            )
+            browser_user_data_dir = gr.Textbox(
+                label="Browser User Data Directory",
+                lines=1,
+                interactive=True,
+                placeholder="Leave empty for default profile",
+                info="Custom profile directory",
+            )
+
+    # Browser Behavior Settings
+    with gr.Accordion("⚙️ Browser Behavior", open=True):
+        gr.Markdown("**Configure how the browser runs** and displays.")
+
+        with gr.Row():
             headless = gr.Checkbox(
-                label="Headless Mode", value=False, info="Run browser without GUI", interactive=True
+                label="Headless Mode",
+                value=False,
+                info="Run browser without visible GUI (faster but no visual feedback)",
+                interactive=True,
             )
             disable_security = gr.Checkbox(
                 label="Disable Security",
                 value=False,
-                info="Disable browser security",
+                info="⚠️ Disable browser security (use with caution)",
                 interactive=True,
             )
 
-    with gr.Group():
         with gr.Row():
             window_w = gr.Number(
-                label="Window Width", value=1280, info="Browser window width", interactive=True
+                label="Window Width",
+                value=1280,
+                info="Browser viewport width in pixels",
+                interactive=True,
             )
             window_h = gr.Number(
-                label="Window Height", value=1100, info="Browser window height", interactive=True
+                label="Window Height",
+                value=1100,
+                info="Browser viewport height in pixels",
+                interactive=True,
             )
-    with gr.Group():
+
+    # Remote Debugging Configuration
+    with gr.Accordion("🔗 Remote Debugging (Advanced)", open=False):
+        gr.Markdown("""
+        **Connect to a remote browser** via Chrome DevTools Protocol or WebSocket.
+
+        Use this for debugging or connecting to browsers running on different machines.
+        """)
+
         with gr.Row():
             cdp_url = gr.Textbox(
                 label="CDP URL",
                 value=os.getenv("BROWSER_CDP", None),
-                info="CDP URL for browser remote debugging",
+                info="Chrome DevTools Protocol endpoint",
+                placeholder="http://localhost:9222",
                 interactive=True,
             )
             wss_url = gr.Textbox(
                 label="WSS URL",
-                info="WSS URL for browser remote debugging",
+                info="WebSocket Secure URL for remote debugging",
+                placeholder="wss://localhost:9222/devtools/browser/...",
                 interactive=True,
             )
-    with gr.Group():
+
+    # Storage Paths Configuration
+    with gr.Accordion("💾 Storage Paths", open=False):
+        gr.Markdown("**Configure where files are saved** by the agent and browser.")
+
         with gr.Row():
             save_recording_path = gr.Textbox(
-                label="Recording Path",
-                placeholder="e.g. ./tmp/record_videos",
-                info="Path to save browser recordings",
+                label="📹 Recording Path",
+                placeholder="./tmp/record_videos",
+                info="Browser screen recordings (GIF/MP4)",
                 interactive=True,
             )
 
             save_trace_path = gr.Textbox(
-                label="Trace Path",
-                placeholder="e.g. ./tmp/traces",
-                info="Path to save Agent traces",
+                label="📊 Trace Path",
+                placeholder="./tmp/traces",
+                info="Agent execution traces for debugging",
                 interactive=True,
             )
 
         with gr.Row():
             save_agent_history_path = gr.Textbox(
-                label="Agent History Save Path",
+                label="📜 Agent History Path",
                 value="./tmp/agent_history",
-                info="Specify the directory where agent history should be saved.",
+                info="Agent conversation and action history",
                 interactive=True,
             )
             save_download_path = gr.Textbox(
-                label="Save Directory for browser downloads",
+                label="⬇️ Downloads Path",
                 value="./tmp/downloads",
-                info="Specify the directory where downloaded files should be saved.",
+                info="Files downloaded by the browser",
                 interactive=True,
             )
     tab_components.update(

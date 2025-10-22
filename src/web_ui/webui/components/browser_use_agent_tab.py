@@ -18,7 +18,6 @@ from browser_use.browser.context import BrowserContext, BrowserContextConfig
 
 # BrowserState is not available in browser_use.browser.views, using BrowserStateHistory instead
 from browser_use.browser.views import BrowserStateHistory
-from gradio.components import Component
 from langchain_core.language_models.chat_models import BaseChatModel
 
 from src.web_ui.agent.browser_use.browser_use_agent import BrowserUseAgent
@@ -1054,7 +1053,7 @@ def create_browser_use_agent_tab(webui_manager: WebuiManager):
     )  # Get all components known to manager
     run_tab_outputs = list(tab_components.values())
 
-    def submit_wrapper(*args) -> AsyncGenerator[dict[Component, Any]]:
+    async def submit_wrapper(*args):
         """Wrapper for handle_submit that yields its results."""
         # Convert individual component values to components dict
         components_dict = {}
@@ -1063,23 +1062,20 @@ def create_browser_use_agent_tab(webui_manager: WebuiManager):
             if i < len(args):
                 components_dict[comp] = args[i]
 
-        async def _async_wrapper():
-            async for update in handle_submit(webui_manager, components_dict):
-                yield update
+        async for update in handle_submit(webui_manager, components_dict):
+            yield update
 
-        return _async_wrapper()
-
-    async def stop_wrapper() -> AsyncGenerator[dict[Component, Any]]:
+    async def stop_wrapper():
         """Wrapper for handle_stop."""
         update_dict = await handle_stop(webui_manager)
         yield update_dict
 
-    async def pause_resume_wrapper() -> AsyncGenerator[dict[Component, Any]]:
+    async def pause_resume_wrapper():
         """Wrapper for handle_pause_resume."""
         update_dict = await handle_pause_resume(webui_manager)
         yield update_dict
 
-    async def clear_wrapper() -> AsyncGenerator[dict[Component, Any]]:
+    async def clear_wrapper():
         """Wrapper for handle_clear."""
         update_dict = await handle_clear(webui_manager)
         yield update_dict
