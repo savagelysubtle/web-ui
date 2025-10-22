@@ -61,7 +61,6 @@ def load_mcp_config_ui(custom_path: str | None = None):
             config_json,
             status,
             validation,
-            gr.update(visible=True),  # Show summary
             get_mcp_config_summary(config),
         )
 
@@ -72,7 +71,6 @@ def load_mcp_config_ui(custom_path: str | None = None):
             json.dumps(default_config, indent=2),
             f"❌ Error loading configuration: {e}",
             "⚠️ Using default configuration",
-            gr.update(visible=False),
             "",
         )
 
@@ -96,7 +94,6 @@ def save_mcp_config_ui(config_text: str, custom_path: str | None = None):
             return (
                 f"❌ Invalid JSON: {e}",
                 "❌ Cannot save invalid JSON",
-                gr.update(visible=False),
                 "",
             )
 
@@ -106,7 +103,6 @@ def save_mcp_config_ui(config_text: str, custom_path: str | None = None):
             return (
                 f"❌ Invalid configuration: {error_msg}",
                 "❌ Cannot save invalid configuration",
-                gr.update(visible=False),
                 "",
             )
 
@@ -123,14 +119,12 @@ def save_mcp_config_ui(config_text: str, custom_path: str | None = None):
             return (
                 f"✅ Configuration saved to {config_path}",
                 "✅ Valid configuration",
-                gr.update(visible=True),
                 get_mcp_config_summary(config),
             )
         else:
             return (
                 f"❌ Failed to save configuration to {config_path}",
                 "⚠️ Configuration is valid but save failed",
-                gr.update(visible=False),
                 "",
             )
 
@@ -139,7 +133,6 @@ def save_mcp_config_ui(config_text: str, custom_path: str | None = None):
         return (
             f"❌ Error: {e}",
             "❌ Save failed",
-            gr.update(visible=False),
             "",
         )
 
@@ -161,7 +154,6 @@ def validate_mcp_config_ui(config_text: str):
         except json.JSONDecodeError as e:
             return (
                 f"❌ Invalid JSON: {e}",
-                gr.update(visible=False),
                 "",
             )
 
@@ -171,13 +163,11 @@ def validate_mcp_config_ui(config_text: str):
         if is_valid:
             return (
                 "✅ Valid configuration",
-                gr.update(visible=True),
                 get_mcp_config_summary(config),
             )
         else:
             return (
                 f"❌ Invalid configuration: {error_msg}",
-                gr.update(visible=False),
                 "",
             )
 
@@ -185,7 +175,6 @@ def validate_mcp_config_ui(config_text: str):
         logger.error(f"Error validating MCP configuration: {e}", exc_info=True)
         return (
             f"❌ Validation error: {e}",
-            gr.update(visible=False),
             "",
         )
 
@@ -195,7 +184,7 @@ def reset_mcp_config_ui():
     Reset MCP configuration to default.
 
     Returns:
-        Tuple of (config_json_str, status_message, validation_message)
+        Tuple of (config_json_str, status_message, validation_message, summary)
     """
     default_config = get_default_mcp_config()
     config_json = json.dumps(default_config, indent=2, ensure_ascii=False)
@@ -204,7 +193,6 @@ def reset_mcp_config_ui():
         config_json,
         "⚠️ Reset to default configuration (not saved)",
         "✅ Valid (default configuration)",
-        gr.update(visible=True),
         get_mcp_config_summary(default_config),
     )
 
@@ -214,7 +202,7 @@ def load_example_config_ui():
     Load example MCP configuration.
 
     Returns:
-        Tuple of (config_json_str, status_message, validation_message)
+        Tuple of (config_json_str, status_message, validation_message, summary)
     """
     try:
         example_path = Path("mcp.example.json")
@@ -224,7 +212,6 @@ def load_example_config_ui():
                 gr.update(),  # Don't change editor content
                 "❌ mcp.example.json not found",
                 "⚠️ Example file not available",
-                gr.update(visible=False),
                 "",
             )
 
@@ -237,7 +224,6 @@ def load_example_config_ui():
             config_json,
             "ℹ️ Loaded example configuration (not saved). Edit and save as needed.",
             "✅ Valid configuration",
-            gr.update(visible=True),
             get_mcp_config_summary(config),
         )
 
@@ -247,7 +233,6 @@ def load_example_config_ui():
             gr.update(),
             f"❌ Error loading example: {e}",
             "",
-            gr.update(visible=False),
             "",
         )
 
@@ -303,7 +288,7 @@ def create_mcp_settings_tab(webui_manager: WebuiManager):
             reset_button = gr.Button("↺ Reset to Default", variant="secondary", scale=1)
             example_button = gr.Button("📖 Load Example Config", variant="secondary", scale=2)
 
-        with gr.Accordion("Server Summary", open=False) as summary_accordion:
+        with gr.Accordion("Server Summary", open=False):
             server_summary = gr.Markdown("No servers configured")
 
         gr.Markdown(
@@ -356,7 +341,6 @@ def create_mcp_settings_tab(webui_manager: WebuiManager):
             "mcp_config_editor": mcp_config_editor,
             "status_message": status_message,
             "validation_message": validation_message,
-            "summary_accordion": summary_accordion,
             "server_summary": server_summary,
         }
     )
@@ -370,7 +354,6 @@ def create_mcp_settings_tab(webui_manager: WebuiManager):
             mcp_config_editor,
             status_message,
             validation_message,
-            summary_accordion,
             server_summary,
         ],
     )
@@ -381,7 +364,6 @@ def create_mcp_settings_tab(webui_manager: WebuiManager):
         outputs=[
             status_message,
             validation_message,
-            summary_accordion,
             server_summary,
         ],
     )
@@ -391,7 +373,6 @@ def create_mcp_settings_tab(webui_manager: WebuiManager):
         inputs=[mcp_config_editor],
         outputs=[
             validation_message,
-            summary_accordion,
             server_summary,
         ],
     )
@@ -403,7 +384,6 @@ def create_mcp_settings_tab(webui_manager: WebuiManager):
             mcp_config_editor,
             status_message,
             validation_message,
-            summary_accordion,
             server_summary,
         ],
     )
@@ -415,15 +395,12 @@ def create_mcp_settings_tab(webui_manager: WebuiManager):
             mcp_config_editor,
             status_message,
             validation_message,
-            summary_accordion,
             server_summary,
         ],
     )
 
     # Load configuration on tab creation
-    initial_config_json, initial_status, initial_validation, _, initial_summary = (
-        load_mcp_config_ui()
-    )
+    initial_config_json, initial_status, initial_validation, initial_summary = load_mcp_config_ui()
     mcp_config_editor.value = initial_config_json
     status_message.value = initial_status
     validation_message.value = initial_validation
