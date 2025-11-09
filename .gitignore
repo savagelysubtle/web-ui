@@ -203,6 +203,6 @@ data/mcp.json
 
 workflow
 
-*.claude/
-*.claude/**
-*.claude
+# IDE and Editor Config Directories
+.claude/
+.cursor/
