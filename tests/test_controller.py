@@ -65,7 +65,7 @@ async def test_mcp_client():
         print(tool.name)
         print(tool.description)
         try:
-            print(tool_param_model().model_json_schema())
+            print(tool_param_model.model_json_schema())
         except AttributeError:
             # Fallback for older Pydantic versions
             print(tool_param_model().schema())  # type: ignore[deprecated]
