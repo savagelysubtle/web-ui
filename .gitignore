@@ -186,7 +186,12 @@ AgentHistoryList.json
 .gradio/
 
 # For Docker
-data/
+# data/  # Commented out - we now use data/ for settings
+
+# Settings data directory (keep structure, ignore content)
+data/*
+!data/.gitkeep
+!data/README.md
 
 # For Config Files (Current Settings)
 .config.pkl
@@ -194,7 +199,10 @@ data/
 
 # MCP Configuration (User-specific)
 mcp.json
+data/mcp.json
 
 workflow
 
-.claude/
+*.claude/
+*.claude/**
+*.claude
