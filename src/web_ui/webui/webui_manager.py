@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import shutil
 import time
 from datetime import datetime
 
@@ -12,15 +13,22 @@ from src.web_ui.agent.deep_research.deep_research_agent import DeepResearchAgent
 from src.web_ui.browser.custom_browser import CustomBrowser
 from src.web_ui.browser.custom_context import CustomBrowserContext
 from src.web_ui.controller.custom_controller import CustomController
+from src.web_ui.utils.config import (
+    DEFAULT_SETTINGS_FILE,
+    OLD_SETTINGS_DIR,
+    SETTINGS_ARCHIVE_DIR,
+    ensure_settings_directories,
+    is_runtime_component,
+)
 
 
 class WebuiManager:
-    def __init__(self, settings_save_dir: str = "./tmp/webui_settings"):
+    def __init__(self, settings_save_dir: str = SETTINGS_ARCHIVE_DIR):
         self.id_to_component: dict[str, Component] = {}
         self.component_to_id: dict[Component, str] = {}
 
         self.settings_save_dir = settings_save_dir
-        os.makedirs(self.settings_save_dir, exist_ok=True)
+        ensure_settings_directories()
 
         # Dashboard state management
         self.settings_panel_visible: bool = False
@@ -79,9 +87,16 @@ class WebuiManager:
         """
         return self.component_to_id[comp]
 
-    def save_config(self, *args) -> str:
+    def save_config(self, *args, as_default: bool = False) -> str:
         """
-        Save config
+        Save config to timestamped file or as default.
+
+        Args:
+            *args: Component values
+            as_default: If True, save as default_settings.json instead of timestamped file
+
+        Returns:
+            Path to saved config file
         """
         # Convert args to components dict
         components = {}
@@ -98,13 +113,20 @@ class WebuiManager:
                 and str(getattr(comp, "interactive", True)).lower() != "false"
             ):
                 comp_id = self.get_id_by_component(comp)
-                cur_settings[comp_id] = components[comp]
+                # Filter out runtime-only components
+                if not is_runtime_component(comp_id):
+                    cur_settings[comp_id] = components[comp]
 
-        config_name = datetime.now().strftime("%Y%m%d-%H%M%S")
-        with open(os.path.join(self.settings_save_dir, f"{config_name}.json"), "w") as fw:
+        if as_default:
+            config_path = DEFAULT_SETTINGS_FILE
+        else:
+            config_name = datetime.now().strftime("%Y%m%d-%H%M%S")
+            config_path = os.path.join(self.settings_save_dir, f"{config_name}.json")
+
+        with open(config_path, "w") as fw:
             json.dump(cur_settings, fw, indent=4)
 
-        return os.path.join(self.settings_save_dir, f"{config_name}.json")
+        return config_path
 
     def load_config(self, config_path: str):
         """
@@ -134,6 +156,104 @@ class WebuiManager:
             }
         )
         yield update_components
+
+    def load_default_settings(self) -> bool:
+        """
+        Load default settings if they exist.
+
+        Returns:
+            True if default settings were loaded, False otherwise
+        """
+        if os.path.exists(DEFAULT_SETTINGS_FILE):
+            try:
+                # Load default settings without showing status message
+                with open(DEFAULT_SETTINGS_FILE) as fr:
+                    ui_settings = json.load(fr)
+
+                update_components = {}
+                provider_changed = False
+                provider_value = None
+
+                for comp_id, comp_val in ui_settings.items():
+                    if comp_id in self.id_to_component:
+                        comp = self.id_to_component[comp_id]
+                        if comp.__class__.__name__ == "Chatbot":
+                            update_components[comp] = comp.__class__(
+                                value=comp_val, type="messages"
+                            )
+                        else:
+                            update_components[comp] = comp.__class__(value=comp_val)
+
+                        # Track if provider changed to trigger model dropdown update
+                        if "llm_provider" in comp_id:
+                            provider_changed = True
+                            provider_value = comp_val
+
+                # Apply updates without yielding (blocking update)
+                for comp, val in update_components.items():
+                    comp.value = val
+
+                # Manually trigger provider change to update model dropdown
+                if provider_changed and provider_value:
+                    try:
+                        # Import here to avoid circular dependencies
+                        from src.web_ui.webui.components.dashboard_settings import (
+                            update_model_dropdown,
+                        )
+
+                        # Update model dropdown for the provider
+                        model_update = update_model_dropdown(provider_value)
+
+                        # Find and update the model component
+                        model_comp_id = comp_id.replace("llm_provider", "llm_model_name")
+                        if model_comp_id in self.id_to_component:
+                            model_comp = self.id_to_component[model_comp_id]
+                            model_comp.value = model_update.get("value", "")
+                            # Also update choices if available
+                            if "choices" in model_update:
+                                model_comp.choices = model_update["choices"]
+
+                    except Exception as e:
+                        print(f"Warning: Could not trigger model dropdown update: {e}")
+
+                return True
+            except Exception as e:
+                print(f"Failed to load default settings: {e}")
+                return False
+        return False
+
+    def save_as_default(self, *args) -> str:
+        """
+        Save current settings as default.
+
+        Args:
+            *args: Component values
+
+        Returns:
+            Path to saved default settings file
+        """
+        return self.save_config(*args, as_default=True)
+
+    def migrate_old_settings(self) -> int:
+        """
+        Migrate old settings from tmp/webui_settings to data/saved_configs.
+
+        Returns:
+            Number of files migrated
+        """
+        migrated_count = 0
+        if os.path.exists(OLD_SETTINGS_DIR):
+            try:
+                for filename in os.listdir(OLD_SETTINGS_DIR):
+                    if filename.endswith(".json"):
+                        src = os.path.join(OLD_SETTINGS_DIR, filename)
+                        dst = os.path.join(self.settings_save_dir, filename)
+                        shutil.copy2(src, dst)
+                        migrated_count += 1
+                print(f"Migrated {migrated_count} settings files from {OLD_SETTINGS_DIR}")
+            except Exception as e:
+                print(f"Failed to migrate old settings: {e}")
+        return migrated_count
 
     def toggle_settings_panel(self) -> bool:
         """

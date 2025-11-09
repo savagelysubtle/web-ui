@@ -332,6 +332,11 @@ async def run_agent_task(
     # --- Agent Settings ---
     # Access settings values via components dict, getting IDs from webui_manager
     def get_setting(key, default=None):
+        # Try dashboard_settings first (primary namespace), then fall back to agent_settings
+        comp = webui_manager.id_to_component.get(f"dashboard_settings.{key}")
+        if comp:
+            return components.get(comp, default)
+        # Fallback to agent_settings for backward compatibility
         comp = webui_manager.id_to_component.get(f"agent_settings.{key}")
         return components.get(comp, default) if comp else default
 
@@ -352,7 +357,7 @@ async def run_agent_task(
     # Load MCP configuration - prioritize file over UI
     mcp_server_config = None
 
-    # First, try to load from mcp.json file
+    # First, try to load from data/mcp.json file
     file_config = load_mcp_config()
     if file_config:
         mcp_server_config = file_config

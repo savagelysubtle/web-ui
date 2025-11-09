@@ -151,7 +151,7 @@ def create_help_modal(webui_manager: WebuiManager):
 
                     ### "MCP tools not appearing"
                     **Solutions**:
-                    - Verify `mcp.json` exists and is valid (use MCP Settings tab)
+                    - Verify `data/mcp.json` exists and is valid (use MCP Settings tab)
                     - Check that required environment variables (API keys) are set
                     - Use "Clear" button to restart the agent with new MCP configuration
 

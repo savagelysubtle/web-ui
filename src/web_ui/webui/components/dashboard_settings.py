@@ -30,16 +30,22 @@ def strtobool(val):
 
 def update_model_dropdown(llm_provider):
     """Update the model name dropdown with predefined models for the selected provider."""
+    print(f"[DEBUG] update_model_dropdown called with provider: {llm_provider}")
     logger.info(f"Updating model dropdown for provider: {llm_provider}")
+    logger.info(f"Available providers: {list(config.model_names.keys())}")
     if llm_provider in config.model_names:
         models = config.model_names[llm_provider]
+        print(f"[DEBUG] Found {len(models)} models for {llm_provider}: {models}")
         logger.info(f"Found {len(models)} models for {llm_provider}: {models[:3]}...")
-        return gr.update(
+        result = gr.update(
             choices=models,
             value=models[0] if models else "",
             interactive=True,
         )
+        print(f"[DEBUG] Returning gr.update with choices: {result.get('choices', 'N/A')}")
+        return result
     else:
+        print(f"[DEBUG] Provider {llm_provider} not found!")
         logger.warning(f"Provider {llm_provider} not found in config.model_names")
         return gr.update(choices=[], value="", interactive=True)
 
@@ -75,6 +81,7 @@ def create_dashboard_settings(webui_manager: WebuiManager):
     # Save/Load Config at Top
     with gr.Row():
         save_config_button = gr.Button("💾 Save", variant="primary", scale=1, size="sm")
+        save_default_button = gr.Button("⭐ Save as Default", variant="primary", scale=1, size="sm")
         load_config_button = gr.Button("📂 Load", variant="secondary", scale=1, size="sm")
 
     config_file = gr.File(
@@ -420,7 +427,12 @@ Expected file: `{mcp_config_path}`
         save_config_button_bottom = gr.Button("💾 Save Configuration", variant="primary")
         load_config_button_bottom = gr.Button("📂 Load Configuration", variant="secondary")
 
-    # Register agent settings components with old-style IDs for compatibility
+    # NOTE: agent_settings registration removed to avoid duplicate component registrations
+    # All components are now registered under dashboard_settings namespace only
+    # Browser use agent tab will read from dashboard_settings namespace
+
+    # Register agent settings components for backward compatibility ONLY
+    # These are registered under dashboard_settings namespace below
     agent_settings_components = {
         "override_system_prompt": override_system_prompt,
         "extend_system_prompt": extend_system_prompt,
@@ -445,7 +457,8 @@ Expected file: `{mcp_config_path}`
         "mcp_json_file": mcp_json_file,
         "mcp_server_config": mcp_server_config,
     }
-    webui_manager.add_components("agent_settings", agent_settings_components)
+    # Duplicate registration removed - only register under dashboard_settings
+    # webui_manager.add_components("agent_settings", agent_settings_components)
 
     # Register browser settings components with old-style IDs for compatibility
     browser_settings_components = {
@@ -470,6 +483,7 @@ Expected file: `{mcp_config_path}`
     settings_components.update(
         {
             "save_config_button": save_config_button,
+            "save_default_button": save_default_button,
             "load_config_button": load_config_button,
             "config_file": config_file,
             "config_status": config_status,
@@ -521,57 +535,11 @@ Expected file: `{mcp_config_path}`
 
     webui_manager.add_components("dashboard_settings", settings_components)
 
-    # Wire up event handlers
+    # NOTE: Event handlers are now wired up in interface.py AFTER all components are registered
+    # This prevents race conditions and ensures Gradio's event system initializes properly
 
-    # LLM Provider change -> Update model dropdown and show/hide Ollama context
-    def update_llm_settings(provider):
-        """Update both model dropdown and Ollama context visibility."""
-        models_update = update_model_dropdown(provider)
-        ollama_visible = gr.update(visible=provider == "ollama")
-        return models_update, ollama_visible
-
-    llm_provider.change(
-        fn=update_llm_settings,
-        inputs=[llm_provider],
-        outputs=[llm_model_name, ollama_num_ctx],
-    )
-
-    # Planner checkbox -> Show/hide planner group
-    use_planner.change(
-        fn=lambda checked: gr.update(visible=checked),
-        inputs=[use_planner],
-        outputs=[planner_group],
-    )
-
-    # Planner provider change
-    def update_planner_settings(provider):
-        """Update both planner model dropdown and Ollama context visibility."""
-        models_update = update_model_dropdown(provider)
-        ollama_visible = gr.update(visible=provider == "ollama")
-        return models_update, ollama_visible
-
-    planner_llm_provider.change(
-        fn=update_planner_settings,
-        inputs=[planner_llm_provider],
-        outputs=[planner_llm_model_name, planner_ollama_num_ctx],
-    )
-
-    # Use Own Browser checkbox -> Show/hide custom browser fields
-    use_own_browser.change(
-        fn=lambda checked: gr.update(visible=checked),
-        inputs=[use_own_browser],
-        outputs=[custom_browser_group],
-    )
-
-    # Browser config changes -> Close browser
-    async def close_wrapper():
-        """Wrapper for closing browser."""
-        await close_browser(webui_manager)
-
-    headless.change(close_wrapper)
-    keep_browser_open.change(close_wrapper)
-    disable_security.change(close_wrapper)
-    use_own_browser.change(close_wrapper)
+    # Export component references for event handler wiring in interface.py
+    # (Components are already accessible via webui_manager.get_component_by_id)
 
     # Note: Save/Load config handlers will be wired up in interface.py
     # to ensure all components are registered first

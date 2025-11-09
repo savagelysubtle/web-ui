@@ -146,15 +146,15 @@ class CustomController(Controller):
 
     async def setup_mcp_client(self, mcp_server_config: dict[str, Any] | None = None):
         """
-        Setup MCP client with provided config or auto-load from mcp.json.
+        Setup MCP client with provided config or auto-load from data/mcp.json.
 
         Args:
             mcp_server_config: Optional MCP server configuration dict.
-                              If None, attempts to load from mcp.json file.
+                              If None, attempts to load from data/mcp.json file.
         """
         # If no config provided, try to load from file
         if mcp_server_config is None:
-            logger.info("No MCP config provided, attempting to load from mcp.json")
+            logger.info("No MCP config provided, attempting to load from data/mcp.json")
             mcp_server_config = load_mcp_config()
 
             if mcp_server_config is None:
@@ -230,7 +230,7 @@ class CustomController(Controller):
 
         Args:
             mcp_server_config: Optional new MCP server configuration dict.
-                              If None, reloads from mcp.json file.
+                              If None, reloads from data/mcp.json file.
         """
         logger.info("Reloading MCP client...")
 

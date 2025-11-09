@@ -266,7 +266,7 @@ def create_mcp_settings_tab(webui_manager: WebuiManager):
             config_path_input = gr.Textbox(
                 label="Configuration File Path",
                 value=str(get_mcp_config_path()),
-                placeholder="Leave empty for default (./mcp.json)",
+                placeholder="Leave empty for default (./data/mcp.json)",
                 scale=3,
             )
             load_button = gr.Button("🔄 Load", scale=1, variant="secondary")

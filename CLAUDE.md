@@ -194,7 +194,7 @@ cp .env.example .env
 
 ### MCP (Model Context Protocol)
 
-**Model Context Protocol (MCP)** allows AI agents to use tools and capabilities from external servers. This project supports persistent MCP configuration via `mcp.json`.
+**Model Context Protocol (MCP)** allows AI agents to use tools and capabilities from external servers. This project supports persistent MCP configuration via `data/mcp.json`.
 
 #### Quick Start
 
@@ -205,11 +205,11 @@ cp .env.example .env
    # Go to the "MCP Settings" tab and click "Load Example Config"
 
    # Option 2: Copy the example file
-   cp mcp.example.json mcp.json
+   cp mcp.example.json data/mcp.json
    ```
 
 2. **Edit Configuration:**
-   Edit `mcp.json` to enable the MCP servers you need:
+   Edit `data/mcp.json` to enable the MCP servers you need:
 
    ```json
    {
@@ -241,11 +241,11 @@ cp .env.example .env
 
 #### Configuration File Locations
 
-- **Default:** `./mcp.json` (project root)
+- **Default:** `./data/mcp.json` (data directory)
 - **Custom:** Set `MCP_CONFIG_PATH` environment variable
 - **Example:** `./mcp.example.json` (reference, not loaded)
 
-The `mcp.json` file is gitignored by default (user-specific configuration).
+The `data/mcp.json` file is gitignored by default (user-specific configuration).
 
 #### Popular MCP Servers
 
@@ -264,7 +264,7 @@ See `mcp.example.json` for complete configuration examples.
 
 #### How It Works
 
-1. **Auto-Loading:** When an agent starts, it automatically loads `mcp.json` if it exists
+1. **Auto-Loading:** When an agent starts, it automatically loads `data/mcp.json` if it exists
 2. **Tool Registration:** Tools from MCP servers are registered as `mcp.{server_name}.{tool_name}`
 3. **Dynamic Usage:** Agents can discover and use MCP tools alongside built-in browser actions
 4. **Hot Reload:** Use the "Clear" button in the Run Agent tab to reload agents with new MCP configuration
@@ -296,7 +296,7 @@ All MCP server configurations **must** include `"transport": "stdio"`. Most MCP 
 
 The **MCP Settings** tab provides:
 
-- **Live Editor:** Edit `mcp.json` with syntax highlighting
+- **Live Editor:** Edit `data/mcp.json` with syntax highlighting
 - **Validation:** Real-time validation of configuration structure
 - **Server Summary:** View configured servers and their details
 - **Example Loading:** One-click loading of example configurations
@@ -313,14 +313,14 @@ The **MCP Settings** tab provides:
 
 **Via File System:**
 
-1. Edit `mcp.json` directly in your editor
+1. Edit `data/mcp.json` directly in your editor
 2. Restart the Web UI or use "Clear" + new agent task
 
 **Via Environment:**
 
 ```bash
 # Use custom config location
-export MCP_CONFIG_PATH=/path/to/custom/mcp.json
+export MCP_CONFIG_PATH=/path/to/custom/data/mcp.json
 python webui.py
 ```
 
@@ -328,9 +328,9 @@ python webui.py
 
 The **Agent Settings** tab shows:
 
-- ✅ **Active Configuration:** Displays current `mcp.json` status
+- ✅ **Active Configuration:** Displays current `data/mcp.json` status
 - 📊 **Server Summary:** Lists configured MCP servers
-- 📁 **File Upload:** Temporary override via JSON file upload (if no `mcp.json` exists)
+- 📁 **File Upload:** Temporary override via JSON file upload (if no `data/mcp.json` exists)
 
 #### Implementation Files
 
@@ -343,14 +343,14 @@ The **Agent Settings** tab shows:
 
 **MCP tools not appearing:**
 
-1. Verify `mcp.json` exists and is valid (use MCP Settings tab validator)
+1. Verify `data/mcp.json` exists and is valid (use MCP Settings tab validator)
 2. Check browser console/terminal for MCP client errors
 3. Ensure required environment variables (API keys) are set
 4. Use "Clear" button to restart the agent with new configuration
 
 **Configuration not loading:**
 
-1. Check file path: `./mcp.json` or `$MCP_CONFIG_PATH`
+1. Check file path: `./data/mcp.json` or `$MCP_CONFIG_PATH`
 2. Validate JSON syntax (no trailing commas, proper quotes)
 3. Review logs for "Loaded MCP configuration from..." message
 

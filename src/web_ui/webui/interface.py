@@ -291,9 +291,8 @@ def create_ui(theme_name="Ocean"):
         }
     }
 
-        // Initialize features after Gradio is ready
+    // Initialize features after Gradio is ready
     setTimeout(function() {
-
         // Keyboard shortcuts
         document.addEventListener('keydown', function(e) {
             // Ctrl/Cmd + Enter to submit
@@ -438,6 +437,109 @@ def create_ui(theme_name="Ocean"):
             outputs=[mcp_modal],
         )
 
+        # Wire up Settings Panel Event Handlers AFTER all components are registered
+        # This ensures Gradio's event system initializes properly
+        from src.web_ui.webui.components.dashboard_settings import update_model_dropdown
+
+        # Get component references
+        llm_provider_comp = ui_manager.get_component_by_id("dashboard_settings.llm_provider")
+        llm_model_comp = ui_manager.get_component_by_id("dashboard_settings.llm_model_name")
+        ollama_ctx_comp = ui_manager.get_component_by_id("dashboard_settings.ollama_num_ctx")
+        use_planner_comp = ui_manager.get_component_by_id("dashboard_settings.use_planner")
+        planner_group_comp = ui_manager.get_component_by_id("dashboard_settings.planner_group")
+        planner_llm_provider_comp = ui_manager.get_component_by_id(
+            "dashboard_settings.planner_llm_provider"
+        )
+        planner_llm_model_comp = ui_manager.get_component_by_id(
+            "dashboard_settings.planner_llm_model_name"
+        )
+        planner_ollama_ctx_comp = ui_manager.get_component_by_id(
+            "dashboard_settings.planner_ollama_num_ctx"
+        )
+        use_own_browser_comp = ui_manager.get_component_by_id("dashboard_settings.use_own_browser")
+        custom_browser_group_comp = ui_manager.get_component_by_id(
+            "dashboard_settings.custom_browser_group"
+        )
+        headless_comp = ui_manager.get_component_by_id("dashboard_settings.headless")
+        keep_browser_open_comp = ui_manager.get_component_by_id(
+            "dashboard_settings.keep_browser_open"
+        )
+        disable_security_comp = ui_manager.get_component_by_id(
+            "dashboard_settings.disable_security"
+        )
+
+        # LLM Provider change -> Update model dropdown and show/hide Ollama context
+        def update_llm_settings(provider):
+            """Update both model dropdown and Ollama context visibility."""
+            print("="*60)
+            print(f"[DEBUG] ⚡ update_llm_settings CALLED with provider: {provider}")
+            print(f"[DEBUG] Provider type: {type(provider)}")
+            print("="*60)
+            
+            models_update = update_model_dropdown(provider)
+            ollama_visible = gr.update(visible=provider == "ollama")
+            
+            print(f"[DEBUG] ✅ Model update: {models_update}")
+            print(f"[DEBUG] ✅ Ollama visible: {ollama_visible}")
+            print(f"[DEBUG] Returning {len(models_update.get('choices', []))} model choices")
+            print("="*60)
+            
+            return models_update, ollama_visible
+
+        print("[SETUP] Attaching .change() handler to llm_provider_comp...")
+        print(f"[SETUP] llm_provider_comp type: {type(llm_provider_comp)}")
+        print(f"[SETUP] llm_provider_comp value: {getattr(llm_provider_comp, 'value', 'NO VALUE')}")
+        
+        change_event = llm_provider_comp.change(  # type: ignore[attr-defined]
+            fn=update_llm_settings,
+            inputs=[llm_provider_comp],
+            outputs=[llm_model_comp, ollama_ctx_comp],
+        )
+        
+        print(f"[SETUP] ✅ Change handler attached: {change_event}")
+        print("[SETUP] Change handler should now fire when provider dropdown changes!")
+
+        # Planner checkbox -> Show/hide planner group
+        use_planner_comp.change(  # type: ignore[attr-defined]
+            fn=lambda checked: gr.update(visible=checked),
+            inputs=[use_planner_comp],
+            outputs=[planner_group_comp],
+        )
+
+        # Planner provider change
+        def update_planner_settings(provider):
+            """Update both planner model dropdown and Ollama context visibility."""
+            print(f"[DEBUG] ⚡ Planner provider changed to: {provider}")
+            models_update = update_model_dropdown(provider)
+            ollama_visible = gr.update(visible=provider == "ollama")
+            print(f"[DEBUG] ✅ Planner model update complete")
+            return models_update, ollama_visible
+
+        planner_llm_provider_comp.change(  # type: ignore[attr-defined]
+            fn=update_planner_settings,
+            inputs=[planner_llm_provider_comp],
+            outputs=[planner_llm_model_comp, planner_ollama_ctx_comp],
+        )
+
+        # Use Own Browser checkbox -> Show/hide custom browser fields
+        use_own_browser_comp.change(  # type: ignore[attr-defined]
+            fn=lambda checked: gr.update(visible=checked),
+            inputs=[use_own_browser_comp],
+            outputs=[custom_browser_group_comp],
+        )
+
+        # Browser config changes -> Close browser
+        from src.web_ui.webui.components.dashboard_settings import close_browser
+
+        async def close_wrapper():
+            """Wrapper for closing browser."""
+            await close_browser(ui_manager)
+
+        headless_comp.change(close_wrapper)  # type: ignore[attr-defined]
+        keep_browser_open_comp.change(close_wrapper)  # type: ignore[attr-defined]
+        disable_security_comp.change(close_wrapper)  # type: ignore[attr-defined]
+        use_own_browser_comp.change(close_wrapper)  # type: ignore[attr-defined]
+
         # Wire up Preset Buttons from Sidebar
         # These will update settings in the Settings panel
         research_btn = ui_manager.get_component_by_id("dashboard_sidebar.research_btn")
@@ -446,9 +548,11 @@ def create_ui(theme_name="Ocean"):
 
         def load_research_preset():
             """Load research preset configuration."""
+            # Update model dropdown manually since .change() doesn't fire from .click() updates
+            model_update = update_model_dropdown("anthropic")
             return [
                 gr.update(value="anthropic"),  # llm_provider
-                gr.update(value="claude-3-5-sonnet-20241022"),  # llm_model_name
+                model_update,  # llm_model_name - updated based on provider
                 gr.update(value=0.7),  # llm_temperature
                 gr.update(value=True),  # use_vision
                 gr.update(value=150),  # max_steps
@@ -459,9 +563,11 @@ def create_ui(theme_name="Ocean"):
 
         def load_automation_preset():
             """Load automation preset configuration."""
+            # Update model dropdown manually since .change() doesn't fire from .click() updates
+            model_update = update_model_dropdown("openai")
             return [
-                gr.update(value="openai"),
-                gr.update(value="gpt-4o"),
+                gr.update(value="openai"),  # llm_provider
+                model_update,  # llm_model_name - updated based on provider
                 gr.update(value=0.6),
                 gr.update(value=True),
                 gr.update(value=100),
@@ -472,9 +578,11 @@ def create_ui(theme_name="Ocean"):
 
         def load_custom_browser_preset():
             """Load custom browser preset configuration."""
+            # Update model dropdown manually since .change() doesn't fire from .click() updates
+            model_update = update_model_dropdown("openai")
             return [
-                gr.update(value="openai"),
-                gr.update(value="gpt-4o-mini"),
+                gr.update(value="openai"),  # llm_provider
+                model_update,  # llm_model_name - updated based on provider
                 gr.update(value=0.6),
                 gr.update(value=True),
                 gr.update(value=100),
@@ -532,12 +640,24 @@ def create_ui(theme_name="Ocean"):
 
         # Wire up Save/Load Config
         save_config_btn = ui_manager.get_component_by_id("dashboard_settings.save_config_button")
+        save_default_btn = ui_manager.get_component_by_id("dashboard_settings.save_default_button")
         load_config_btn = ui_manager.get_component_by_id("dashboard_settings.load_config_button")
         config_file = ui_manager.get_component_by_id("dashboard_settings.config_file")
         config_status = ui_manager.get_component_by_id("dashboard_settings.config_status")
 
         save_config_btn.click(  # type: ignore[attr-defined]
             fn=ui_manager.save_config,
+            inputs=list(ui_manager.get_components()),
+            outputs=[config_status],
+        )
+
+        def save_default_wrapper(*args):
+            """Wrapper for save_as_default that returns status message."""
+            file_path = ui_manager.save_as_default(*args)
+            return gr.update(value=f"✅ Saved as default settings: {file_path}")
+
+        save_default_btn.click(  # type: ignore[attr-defined]
+            fn=save_default_wrapper,
             inputs=list(ui_manager.get_components()),
             outputs=[config_status],
         )
@@ -553,6 +673,21 @@ def create_ui(theme_name="Ocean"):
             inputs=[config_file],
             outputs=ui_manager.get_components(),
         )
+
+        # Initialize default settings and migrate old settings
+        from src.web_ui.utils.config import DEFAULT_SETTINGS_FILE
+
+        # Migrate old settings
+        migrated_count = ui_manager.migrate_old_settings()
+        if migrated_count > 0:
+            print(f"✅ Migrated {migrated_count} settings files to data/saved_configs/")
+
+        # Load default settings
+        default_loaded = ui_manager.load_default_settings()
+        if default_loaded:
+            print(f"✅ Loaded default settings from {DEFAULT_SETTINGS_FILE}")
+        else:
+            print("ℹ️ No default settings found, using environment defaults")
 
         # Initialize Browser Use Agent
         ui_manager.init_browser_use_agent()

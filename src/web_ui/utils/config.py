@@ -1,3 +1,11 @@
+import os
+
+# Settings directory paths
+SETTINGS_DIR = "./data"
+DEFAULT_SETTINGS_FILE = "./data/default_settings.json"
+SETTINGS_ARCHIVE_DIR = "./data/saved_configs"
+OLD_SETTINGS_DIR = "./tmp/webui_settings"
+
 PROVIDER_DISPLAY_NAMES = {
     "openai": "OpenAI",
     "azure_openai": "Azure OpenAI",
@@ -128,3 +136,34 @@ model_names = {
         "Qwen/Qwen3-235B-A22B",
     ],
 }
+
+
+def ensure_settings_directories():
+    """Ensure settings directories exist."""
+    os.makedirs(SETTINGS_DIR, exist_ok=True)
+    os.makedirs(SETTINGS_ARCHIVE_DIR, exist_ok=True)
+
+
+def is_runtime_component(comp_id: str) -> bool:
+    """
+    Check if a component ID represents runtime-only data that shouldn't be saved.
+
+    Args:
+        comp_id: Component ID to check
+
+    Returns:
+        True if component is runtime-only and should be excluded from saves
+    """
+    runtime_patterns = [
+        "chat_history",
+        "current_task",
+        "agent_task_id",
+        "task_id",
+        "save_dir",
+        "response_event",
+        "user_help_response",
+        "chatbot",
+        "visible",
+        "file",  # File uploads
+    ]
+    return any(pattern in comp_id.lower() for pattern in runtime_patterns)

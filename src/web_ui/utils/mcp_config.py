@@ -13,7 +13,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 # Default MCP configuration file location
-DEFAULT_MCP_CONFIG_PATH = Path("./mcp.json")
+DEFAULT_MCP_CONFIG_PATH = Path("./data/mcp.json")
 
 
 def get_mcp_config_path() -> Path:
@@ -22,7 +22,7 @@ def get_mcp_config_path() -> Path:
 
     Priority:
     1. MCP_CONFIG_PATH environment variable
-    2. ./mcp.json in current directory
+    2. ./data/mcp.json in data directory
 
     Returns:
         Path to the MCP configuration file
